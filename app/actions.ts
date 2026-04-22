@@ -6,9 +6,12 @@ import {
   cancelExchange,
   findByCredentials,
   getByPageId,
+  issueBatchSerials as repoIssueBatchSerials,
   issueNextSerial as repoIssueNextSerial,
+  listAllSerials as repoListAllSerials,
   regenerateMagicWord,
   requestExchange,
+  resetAllSerials as repoResetAllSerials,
   saveProfile,
 } from "@/lib/notion/repo";
 import { padSerial, parseSerial } from "@/lib/format";
@@ -200,4 +203,122 @@ export async function regenerateMagicWordAction(
   const word = await regenerateMagicWord(pageId);
   revalidatePath("/admin");
   return { ok: true, data: { magicWord: word } };
+}
+
+const batchIssueSchema = z.object({
+  count: z.number().int().min(1).max(50),
+});
+
+export type IssuedItem = {
+  serial: number;
+  serialDisplay: string;
+  magicWord: string;
+};
+
+export async function issueBatchSerialsAction(
+  input: z.infer<typeof batchIssueSchema>
+): Promise<ActionResult<{ items: IssuedItem[] }>> {
+  if (!(await readAdmin())) return { ok: false, error: "unauthorized" };
+  const parsed = batchIssueSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid_input" };
+
+  try {
+    const issued = await repoIssueBatchSerials(parsed.data.count);
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return {
+      ok: true,
+      data: {
+        items: issued.map((it) => ({
+          serial: it.serial,
+          serialDisplay: padSerial(it.serial),
+          magicWord: it.magicWord,
+        })),
+      },
+    };
+  } catch (e) {
+    console.error("[actions] issueBatchSerials failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "batch_failed",
+    };
+  }
+}
+
+export type AdminSerialRow = {
+  pageId: string;
+  serial: number;
+  serialDisplay: string;
+  magicWord: string;
+  status: string;
+  used: boolean;
+  nickname: string;
+  contact: string;
+  wantsPrintedBook: boolean;
+  issuedAt: string;
+};
+
+const resetSchema = z.object({
+  // Client must echo back the literal string "RESET" to confirm. This
+  // prevents accidental resets from a stray click.
+  confirm: z.literal("RESET"),
+});
+
+export async function resetSerialsAction(
+  input: z.infer<typeof resetSchema>
+): Promise<ActionResult<{ archived: number }>> {
+  if (!(await readAdmin())) return { ok: false, error: "unauthorized" };
+  const parsed = resetSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid_confirmation" };
+
+  try {
+    const archived = await repoResetAllSerials();
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { ok: true, data: { archived } };
+  } catch (e) {
+    console.error("[actions] resetSerials failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "reset_failed",
+    };
+  }
+}
+
+/**
+ * List every issued serial, with a derived `used` flag. Used by the
+ * admin management drawer. A row counts as "used" once it has moved past
+ * the freshly-issued state — i.e. the buyer has signed in and saved a
+ * profile (status moves off "Issued" or a nickname has been set).
+ */
+export async function listAllSerialsAction(): Promise<
+  ActionResult<{ rows: AdminSerialRow[] }>
+> {
+  if (!(await readAdmin())) return { ok: false, error: "unauthorized" };
+  try {
+    const rows = await repoListAllSerials();
+    return {
+      ok: true,
+      data: {
+        rows: rows.map((r) => ({
+          pageId: r.pageId,
+          serial: r.serial,
+          serialDisplay: padSerial(r.serial),
+          magicWord: r.magicWord,
+          status: r.status,
+          used: r.status !== "Issued" || r.nickname.trim().length > 0,
+          nickname: r.nickname,
+          contact: r.contact,
+          wantsPrintedBook: r.wantsPrintedBook,
+          issuedAt: r.issuedAt,
+        })),
+      },
+    };
+  } catch (e) {
+    console.error("[actions] listAllSerials failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "list_failed",
+    };
+  }
 }

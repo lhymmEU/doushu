@@ -138,6 +138,35 @@ export const zh = ({
     completed: "已完成资料",
     exchanges: "纸书申请",
     signOut: "退出",
+    batchTitle: "批量派发",
+    batchCountLabel: "数量",
+    batchIssue: "批量生成",
+    batchIssued: "已生成 {n} 个编号",
+    batchFailed: "批量派发失败",
+    copyAll: "复制全部",
+    manage: "管理",
+    manageTitle: "已派发编号",
+    manageDescription: "查看每个编号 + 暗号，以及它是否已被使用。",
+    manageRefresh: "刷新",
+    manageEmpty: "还没有派发任何编号。",
+    manageFailed: "无法读取列表",
+    manageTotal: "共 {n} 个",
+    filterAll: "全部",
+    filterUsed: "已使用",
+    filterUnused: "未使用",
+    used: "已使用",
+    unused: "未使用",
+    searchPlaceholder: "搜编号、暗号或昵称",
+    dangerZone: "危险操作",
+    resetTitle: "重置全部编号",
+    resetHint: "把已派发的所有编号归档，下一次从 #0001 开始。原数据会保留在 Notion 的归档区，可以手动恢复。",
+    resetButton: "重置全部编号",
+    resetConfirmTitle: "确定重置吗？",
+    resetConfirmBody: "这会归档全部 {n} 个已派发编号。请输入大写「RESET」以确认。",
+    resetConfirmPlaceholder: "RESET",
+    resetConfirmCta: "我确认，开始重置",
+    resetSuccess: "已归档 {n} 个编号",
+    resetFailed: "重置失败",
   },
   langSwitch: {
     label: "语言",
@@ -239,6 +268,35 @@ type CopyShape = {
     completed: string;
     exchanges: string;
     signOut: string;
+    batchTitle: string;
+    batchCountLabel: string;
+    batchIssue: string;
+    batchIssued: string;
+    batchFailed: string;
+    copyAll: string;
+    manage: string;
+    manageTitle: string;
+    manageDescription: string;
+    manageRefresh: string;
+    manageEmpty: string;
+    manageFailed: string;
+    manageTotal: string;
+    filterAll: string;
+    filterUsed: string;
+    filterUnused: string;
+    used: string;
+    unused: string;
+    searchPlaceholder: string;
+    dangerZone: string;
+    resetTitle: string;
+    resetHint: string;
+    resetButton: string;
+    resetConfirmTitle: string;
+    resetConfirmBody: string;
+    resetConfirmPlaceholder: string;
+    resetConfirmCta: string;
+    resetSuccess: string;
+    resetFailed: string;
   };
   langSwitch: { label: string; zh: string; en: string };
   common: { cancel: string; close: string; saving: string; loading: string };

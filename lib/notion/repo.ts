@@ -134,6 +134,30 @@ export async function recentlyIssued(limit = 10): Promise<SerialRow[]> {
   return res.results.map((r) => rowFromPage(r as unknown as NotionPage));
 }
 
+/**
+ * List every issued row, sorted by serial descending. Used by the admin
+ * management drawer. Not cached because admins want fresh data.
+ */
+export async function listAllSerials(): Promise<SerialRow[]> {
+  const out: SerialRow[] = [];
+  let cursor: string | undefined = undefined;
+
+  do {
+    const res = await notion().dataSources.query({
+      data_source_id: dataSourceId(),
+      sorts: [{ property: "Number", direction: "descending" }],
+      page_size: 100,
+      start_cursor: cursor,
+    });
+    for (const r of res.results) {
+      out.push(rowFromPage(r as unknown as NotionPage));
+    }
+    cursor = res.next_cursor ?? undefined;
+  } while (cursor);
+
+  return out;
+}
+
 export async function getByPageId(pageId: string): Promise<SerialRow | null> {
   try {
     const page = (await notion().pages.retrieve({ page_id: pageId })) as unknown as NotionPage;
@@ -146,18 +170,14 @@ export async function getByPageId(pageId: string): Promise<SerialRow | null> {
 
 /* ─────────── writes ─────────── */
 
-export async function issueNextSerial(): Promise<{
+export type IssuedSerial = {
   serial: number;
   magicWord: string;
   pageId: string;
-}> {
-  const top = await highestSerial();
-  const next = top + 1;
-  if (next > TOTAL_GOAL) {
-    throw new Error("All 3000 serials have been issued.");
-  }
-  const magicWord = generateMagicWord();
+};
 
+async function createSerialRow(next: number): Promise<IssuedSerial> {
+  const magicWord = generateMagicWord();
   const created = await notion().pages.create({
     parent: { type: "data_source_id", data_source_id: dataSourceId() },
     properties: {
@@ -169,9 +189,60 @@ export async function issueNextSerial(): Promise<{
       "Wants Printed Book": checkbox(false),
     },
   });
-
-  bustCounts();
   return { serial: next, magicWord, pageId: created.id };
+}
+
+export async function issueNextSerial(): Promise<IssuedSerial> {
+  const top = await highestSerial();
+  const next = top + 1;
+  if (next > TOTAL_GOAL) {
+    throw new Error("All 3000 serials have been issued.");
+  }
+  const issued = await createSerialRow(next);
+  bustCounts();
+  return issued;
+}
+
+/**
+ * Archive every issued row. After this, `highestSerial()` returns 0 and
+ * the next issue starts at #0001. Existing pages are not deleted — Notion
+ * archives them, so they can be restored manually if needed.
+ *
+ * Returns the number of rows archived.
+ */
+export async function resetAllSerials(): Promise<number> {
+  const rows = await listAllSerials();
+  for (const row of rows) {
+    await notion().pages.update({ page_id: row.pageId, archived: true });
+  }
+  bustWall();
+  bustCounts();
+  return rows.length;
+}
+
+/**
+ * Issue `count` serials in one batch. Reads the current top once, then
+ * creates rows sequentially (Notion has no bulk-create endpoint). Throws
+ * if the batch would overflow the total goal.
+ */
+export async function issueBatchSerials(
+  count: number
+): Promise<IssuedSerial[]> {
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error("Batch count must be a positive integer.");
+  }
+  const top = await highestSerial();
+  if (top + count > TOTAL_GOAL) {
+    throw new Error(
+      `Only ${TOTAL_GOAL - top} serial(s) remain — cannot issue ${count}.`
+    );
+  }
+  const issued: IssuedSerial[] = [];
+  for (let i = 1; i <= count; i++) {
+    issued.push(await createSerialRow(top + i));
+  }
+  bustCounts();
+  return issued;
 }
 
 export async function regenerateMagicWord(pageId: string): Promise<string> {
