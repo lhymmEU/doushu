@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   cancelExchange,
+  confirmDelivery,
   findByCredentials,
   getByPageId,
   issueBatchSerials as repoIssueBatchSerials,
@@ -132,6 +133,31 @@ export async function requestExchangeAction(
     };
   }
 
+  revalidatePath("/");
+  return { ok: true, data: undefined };
+}
+
+export async function confirmDeliveryAction(): Promise<ActionResult> {
+  const session = await readBuyer();
+  if (!session) return { ok: false, error: "not_signed_in" };
+
+  // Only allow confirming when the admin has actually marked the row as
+  // shipped — guards against stale UI state on the client.
+  const row = await getByPageId(session.pageId);
+  if (!row) return { ok: false, error: "not_found" };
+  if (row.status !== "Shipped") {
+    return { ok: false, error: "not_shipped_yet" };
+  }
+
+  try {
+    await confirmDelivery(session.pageId);
+  } catch (e) {
+    console.error("[actions] confirmDelivery failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "confirm_failed",
+    };
+  }
   revalidatePath("/");
   return { ok: true, data: undefined };
 }

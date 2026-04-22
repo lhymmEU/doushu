@@ -294,6 +294,17 @@ export async function requestExchange(
   bustCounts();
 }
 
+export async function confirmDelivery(pageId: string): Promise<void> {
+  await notion().pages.update({
+    page_id: pageId,
+    properties: {
+      Status: selectOption("Delivered" as SerialStatus),
+    },
+  });
+  bustWall();
+  bustCounts();
+}
+
 export async function cancelExchange(pageId: string): Promise<void> {
   await notion().pages.update({
     page_id: pageId,

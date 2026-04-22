@@ -93,7 +93,7 @@ Inside the parent page, add an inline database called **Doushu Serials** with **
 | `Address`             | Text        | Optional, for printed-book exchange                                                    |
 | `Wants Printed Book`  | Checkbox    |                                                                                        |
 | `Show on Wall`        | Checkbox    | Buyer toggles this in `MyBookSheet`                                                    |
-| `Status`              | Select      | Options: `Issued`, `Profile Complete`, `Exchange Requested`, `Shipping Paid`, `Shipped`, `Delivered`, `Cancelled` |
+| `Status`              | Select      | Options: `Issued`, `Profile Complete`, `Exchange Requested`, `Shipped`, `Delivered`, `Cancelled` (postage is collected on delivery; the buyer self-confirms receipt to move `Shipped` → `Delivered`) |
 | `Issued At`           | Created time |                                                                                        |
 | `Updated At`          | Last edited time |                                                                                    |
 

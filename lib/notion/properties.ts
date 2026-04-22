@@ -46,7 +46,6 @@ export type SerialStatus =
   | "Issued"
   | "Profile Complete"
   | "Exchange Requested"
-  | "Shipping Paid"
   | "Shipped"
   | "Delivered";
 
@@ -73,7 +72,10 @@ export function rowFromPage(page: NotionPage): SerialRow {
   const issuedAt =
     readCreatedTime(p["Issued At"]) ?? page.created_time ?? new Date().toISOString();
 
-  const status = (readSelect(p["Status"]) ?? "Issued") as SerialStatus;
+  const rawStatus = readSelect(p["Status"]) ?? "Issued";
+  // Legacy rows may still carry the deprecated "Shipping Paid" option; treat
+  // them as "Shipped" so the timeline keeps highlighting a valid step.
+  const status = (rawStatus === "Shipping Paid" ? "Shipped" : rawStatus) as SerialStatus;
 
   return {
     pageId: page.id,

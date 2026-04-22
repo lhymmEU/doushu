@@ -58,11 +58,14 @@ export const zh = ({
     addressTooShort: "请填写完整的收件地址",
     exchangeRequested: "已提交申请",
     exchangeFailed: "提交失败，请稍后再试或联系出版人",
+    confirmReceipt: "确认收货",
+    confirmReceiptHint: "收到纸书后请点这里，邮费在收货时支付。",
+    receiptConfirmed: "已确认收货，谢谢！",
+    receiptFailed: "确认失败，请稍后再试",
     timeline: {
       issued: "已领取",
       profileComplete: "信息已填",
       exchangeRequested: "已申请纸书",
-      shippingPaid: "邮费已付",
       shipped: "已发货",
       delivered: "已送达",
     },
@@ -229,11 +232,14 @@ type CopyShape = {
     addressTooShort: string;
     exchangeRequested: string;
     exchangeFailed: string;
+    confirmReceipt: string;
+    confirmReceiptHint: string;
+    receiptConfirmed: string;
+    receiptFailed: string;
     timeline: {
       issued: string;
       profileComplete: string;
       exchangeRequested: string;
-      shippingPaid: string;
       shipped: string;
       delivered: string;
     };

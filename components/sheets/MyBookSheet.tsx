@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useT } from "@/lib/i18n";
 import {
   cancelExchangeAction,
+  confirmDeliveryAction,
   getMyBook,
   requestExchangeAction,
   saveProfileAction,
@@ -103,6 +104,24 @@ export function MyBookSheet({
       } catch (err) {
         console.error("[myBook] requestExchange failed", err);
         toast.error(t.myBook.exchangeFailed);
+      }
+    });
+  }
+
+  function confirmReceipt() {
+    startTransition(async () => {
+      try {
+        const res = await confirmDeliveryAction();
+        if (!res.ok) {
+          toast.error(t.myBook.receiptFailed);
+          return;
+        }
+        toast.success(t.myBook.receiptConfirmed);
+        const refreshed = await getMyBook();
+        if (refreshed) setRow(refreshed);
+      } catch (err) {
+        console.error("[myBook] confirmReceipt failed", err);
+        toast.error(t.myBook.receiptFailed);
       }
     });
   }
@@ -256,7 +275,6 @@ export function MyBookSheet({
             {row.nickname && (
               <div className="mt-2 rounded-lg border border-hairline bg-paper p-4">
                 {row.status === "Exchange Requested" ||
-                row.status === "Shipping Paid" ||
                 row.status === "Shipped" ||
                 row.status === "Delivered" ? (
                   <div className="flex flex-col gap-2">
@@ -274,6 +292,25 @@ export function MyBookSheet({
                       >
                         {t.myBook.cancelExchange}
                       </Button>
+                    )}
+                    {row.status === "Shipped" && (
+                      <div className="mt-2 flex flex-col gap-2">
+                        <p className="text-xs text-ink-mute">
+                          {t.myBook.confirmReceiptHint}
+                        </p>
+                        <Button
+                          type="button"
+                          onClick={confirmReceipt}
+                          disabled={pending}
+                          className="h-10 self-start rounded-full bg-ink px-5 text-paper hover:bg-ink/90"
+                        >
+                          {pending ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            t.myBook.confirmReceipt
+                          )}
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ) : (
