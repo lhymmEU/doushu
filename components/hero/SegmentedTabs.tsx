@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useT } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
-type TabId = "wall" | "about" | "how" | "faq";
+type TabId = "wall" | "how" | "faq";
 
 export function SegmentedTabs({
   panels,
@@ -16,7 +16,6 @@ export function SegmentedTabs({
 
   const items: { id: TabId; label: string }[] = [
     { id: "wall", label: t.tabs.wall },
-    { id: "about", label: t.tabs.about },
     { id: "how", label: t.tabs.how },
     { id: "faq", label: t.tabs.faq },
   ];

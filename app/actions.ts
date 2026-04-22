@@ -98,7 +98,13 @@ export async function saveProfileAction(
 }
 
 const exchangeSchema = z.object({
-  address: z.string().min(8).max(400),
+  // Chinese addresses can be quite short (e.g. "武汉市..."), so we only
+  // require a non-trivial trimmed string and leave the upper bound generous.
+  address: z
+    .string()
+    .trim()
+    .min(2, "address_too_short")
+    .max(400, "address_too_long"),
 });
 
 export async function requestExchangeAction(
@@ -108,9 +114,21 @@ export async function requestExchangeAction(
   if (!session) return { ok: false, error: "not_signed_in" };
 
   const parsed = exchangeSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "invalid_input" };
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { ok: false, error: issue?.message ?? "invalid_input" };
+  }
 
-  await requestExchange(session.pageId, parsed.data.address);
+  try {
+    await requestExchange(session.pageId, parsed.data.address);
+  } catch (e) {
+    console.error("[actions] requestExchange failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "exchange_failed",
+    };
+  }
+
   revalidatePath("/");
   return { ok: true, data: undefined };
 }
@@ -118,7 +136,15 @@ export async function requestExchangeAction(
 export async function cancelExchangeAction(): Promise<ActionResult> {
   const session = await readBuyer();
   if (!session) return { ok: false, error: "not_signed_in" };
-  await cancelExchange(session.pageId);
+  try {
+    await cancelExchange(session.pageId);
+  } catch (e) {
+    console.error("[actions] cancelExchange failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "cancel_failed",
+    };
+  }
   revalidatePath("/");
   return { ok: true, data: undefined };
 }

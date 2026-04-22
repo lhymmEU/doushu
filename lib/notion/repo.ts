@@ -219,6 +219,8 @@ export async function requestExchange(
       Status: selectOption("Exchange Requested" as SerialStatus),
     },
   });
+  bustWall();
+  bustCounts();
 }
 
 export async function cancelExchange(pageId: string): Promise<void> {
@@ -229,6 +231,8 @@ export async function cancelExchange(pageId: string): Promise<void> {
       Status: selectOption("Profile Complete" as SerialStatus),
     },
   });
+  bustWall();
+  bustCounts();
 }
 
 /* ─────────── cache busting ─────────── */

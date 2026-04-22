@@ -58,6 +58,9 @@ export const en: Copy = {
     requestExchange: "Request a printed book",
     cancelExchange: "Cancel request",
     addressLabel: "Shipping address",
+    addressTooShort: "Please enter a complete shipping address",
+    exchangeRequested: "Request submitted",
+    exchangeFailed: "Could not submit. Please try again or contact the publisher.",
     timeline: {
       issued: "Issued",
       profileComplete: "Profile complete",

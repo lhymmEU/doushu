@@ -11,6 +11,7 @@ import { SegmentedTabs } from "./SegmentedTabs";
 import { SignInSheet } from "@/components/sheets/SignInSheet";
 import { MyBookSheet } from "@/components/sheets/MyBookSheet";
 import { AboutPanel, HowPanel, FaqPanel } from "@/components/sheets/InfoPanels";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 /**
  * Client shell that owns the sheet open/close state.
@@ -96,7 +97,6 @@ export function HeroShell({
         <SegmentedTabs
           panels={{
             wall: wall,
-            about: <AboutPanel />,
             how: <HowPanel />,
             faq: <FaqPanel />,
           }}
@@ -115,8 +115,6 @@ export function HeroShell({
     </main>
   );
 }
-
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 function AboutQuickSheet({
   open,

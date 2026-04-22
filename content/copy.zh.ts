@@ -55,6 +55,9 @@ export const zh = ({
     requestExchange: "申请换纸书",
     cancelExchange: "取消申请",
     addressLabel: "收件地址",
+    addressTooShort: "请填写完整的收件地址",
+    exchangeRequested: "已提交申请",
+    exchangeFailed: "提交失败，请稍后再试或联系出版人",
     timeline: {
       issued: "已领取",
       profileComplete: "信息已填",
@@ -194,6 +197,9 @@ type CopyShape = {
     requestExchange: string;
     cancelExchange: string;
     addressLabel: string;
+    addressTooShort: string;
+    exchangeRequested: string;
+    exchangeFailed: string;
     timeline: {
       issued: string;
       profileComplete: string;

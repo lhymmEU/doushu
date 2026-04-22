@@ -85,27 +85,42 @@ export function MyBookSheet({
   }
 
   function submitExchange() {
-    if (!address.trim()) {
-      toast.error(t.myBook.addressLabel);
+    const trimmed = address.trim();
+    if (trimmed.length < 2) {
+      toast.error(`${t.myBook.addressLabel}：${t.myBook.addressTooShort}`);
       return;
     }
     startTransition(async () => {
-      const res = await requestExchangeAction({ address });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
+      try {
+        const res = await requestExchangeAction({ address: trimmed });
+        if (!res.ok) {
+          toast.error(t.myBook.exchangeFailed);
+          return;
+        }
+        toast.success(t.myBook.exchangeRequested);
+        const refreshed = await getMyBook();
+        if (refreshed) setRow(refreshed);
+      } catch (err) {
+        console.error("[myBook] requestExchange failed", err);
+        toast.error(t.myBook.exchangeFailed);
       }
-      toast.success("✓");
-      const refreshed = await getMyBook();
-      if (refreshed) setRow(refreshed);
     });
   }
 
   function cancelExchange() {
     startTransition(async () => {
-      await cancelExchangeAction();
-      const refreshed = await getMyBook();
-      if (refreshed) setRow(refreshed);
+      try {
+        const res = await cancelExchangeAction();
+        if (!res.ok) {
+          toast.error(t.myBook.exchangeFailed);
+          return;
+        }
+        const refreshed = await getMyBook();
+        if (refreshed) setRow(refreshed);
+      } catch (err) {
+        console.error("[myBook] cancelExchange failed", err);
+        toast.error(t.myBook.exchangeFailed);
+      }
     });
   }
 
