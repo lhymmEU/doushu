@@ -1,26 +1,232 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─────────────────────────────────────────────────────────────
+   Doushu — quiet luxury × paper craft
+   Palette inspired by Hermès, Loro Piana, Aesop, Bottega Veneta
+   with a Chinese-seal red accent.
+   ───────────────────────────────────────────────────────────── */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand surfaces */
+  --paper: oklch(0.962 0.018 80);          /* warm ivory background */
+  --ivory: oklch(0.928 0.025 80);          /* card ivory */
+  --ink: oklch(0.15 0.012 280);            /* near-black text */
+  --ink-soft: oklch(0.35 0.01 280);        /* secondary text */
+  --ink-mute: oklch(0.55 0.008 280);       /* tertiary / labels */
+  --hairline: oklch(0.85 0.018 80);        /* divider */
+
+  --gold: oklch(0.62 0.085 75);            /* muted brushed gold */
+  --gold-soft: oklch(0.82 0.055 80);       /* soft gold */
+  --seal: oklch(0.42 0.13 25);             /* Chinese seal red */
+  --seal-soft: oklch(0.55 0.13 25);
+  --jade: oklch(0.50 0.055 165);           /* success jade */
+
+  /* Shadcn token mapping (light) */
+  --radius: 0.625rem;
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--ivory);
+  --card-foreground: var(--ink);
+  --popover: oklch(0.985 0.012 80);
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: var(--ivory);
+  --secondary-foreground: var(--ink);
+  --muted: oklch(0.94 0.018 80);
+  --muted-foreground: var(--ink-mute);
+  --accent: var(--gold-soft);
+  --accent-foreground: var(--ink);
+  --destructive: var(--seal);
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--gold);
+  --chart-1: var(--seal);
+  --chart-2: var(--gold);
+  --chart-3: var(--jade);
+  --chart-4: var(--ink-soft);
+  --chart-5: var(--ink-mute);
+  --sidebar: var(--ivory);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: var(--paper);
+  --sidebar-accent: var(--gold-soft);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: var(--gold);
 }
 
 @theme inline {
+  --color-paper: var(--paper);
+  --color-ivory: var(--ivory);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-mute: var(--ink-mute);
+  --color-hairline: var(--hairline);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-seal: var(--seal);
+  --color-seal-soft: var(--seal-soft);
+  --color-jade: var(--jade);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-display: var(--font-display), "Noto Serif SC", "Songti SC", serif;
+  --font-sans: var(--font-sans), "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
+  --font-han-display: "Noto Serif SC", "Songti SC", serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --ease-luxe: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Base resets + typography */
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans), "Noto Sans SC", "PingFang SC", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-feature-settings: "ss01", "ss02", "cv11";
+}
+
+/* Subtle paper grain — barely visible, adds richness */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+      circle at 20% 30%,
+      rgb(0 0 0 / 0.012) 0,
+      transparent 1px
+    ),
+    radial-gradient(circle at 80% 70%, rgb(0 0 0 / 0.012) 0, transparent 1px);
+  background-size: 4px 4px, 5px 5px;
+  z-index: 0;
+}
+
+/* Display utilities */
+.text-display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+.text-han-display {
+  font-family: var(--font-han-display);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.text-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+/* Tabular numbers for serial counters */
+.tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Hairline rule */
+.hairline {
+  height: 1px;
+  background: var(--hairline);
+}
+
+/* Sway animation for hanging keychains */
+@keyframes sway {
+  0%, 100% {
+    transform: rotate(-2.2deg);
+  }
+  50% {
+    transform: rotate(2.2deg);
+  }
+}
+
+@keyframes sway-soft {
+  0%, 100% {
+    transform: rotate(-1.4deg);
+  }
+  50% {
+    transform: rotate(1.6deg);
+  }
+}
+
+@keyframes float-up {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-sway {
+  transform-origin: top center;
+  animation: sway 5.6s var(--ease-luxe) infinite;
+}
+
+.animate-sway-soft {
+  transform-origin: top center;
+  animation: sway-soft 7.2s var(--ease-luxe) infinite;
+}
+
+.animate-float-up {
+  animation: float-up 600ms var(--ease-luxe) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sway,
+  .animate-sway-soft,
+  .animate-float-up {
+    animation: none;
+  }
+}
+
+/* Print: a clean serial card sheet */
+@media print {
+  body::before {
+    display: none;
+  }
+  .no-print {
+    display: none !important;
+  }
 }
