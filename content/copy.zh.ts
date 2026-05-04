@@ -13,7 +13,26 @@ export const zh = ({
     subtitle:
       "一本可以挂在钥匙串上的迷你书。集齐三千份心意，我们就把它印成真正的纸书，从武汉寄到你手上。",
     primaryCta: "我有一本",
+    waitlistCta: "我想要",
     secondaryCta: "了解项目",
+  },
+  waitlist: {
+    title: "加入小红书群聊",
+    qrCaption: "加入小红书群聊实时关注项目最新进展",
+    qrAlt: "小红书群聊二维码",
+    nicknameLabel: "你的昵称",
+    nicknamePlaceholder: "想被怎么称呼？",
+    nicknameHint: "用于在心愿墙与发货名单上保留你的位置。",
+    nicknameRequired: "请填一个昵称",
+    nicknameTooLong: "昵称不要超过 40 个字",
+    nicknameTaken: "已被使用，换一个？",
+    nicknameAvailable: "可用",
+    nicknameChecking: "正在确认…",
+    downloadCta: "保存二维码",
+    downloadPending: "正在保存…",
+    downloadFailed: "保存失败，请稍后再试",
+    notConfigured: "暂未开通候补名单，敬请期待。",
+    joined: "已加入候补，二维码已开始下载",
   },
   progress: {
     of: "已售 / 共",
@@ -170,6 +189,18 @@ export const zh = ({
     resetConfirmCta: "我确认，开始重置",
     resetSuccess: "已归档 {n} 个编号",
     resetFailed: "重置失败",
+    shipToggleTitle: "发货模式",
+    shipToggleHint: "切换首页主按钮：未准备时为「我想要」，准备好后变成「我有一本」。",
+    shipReadyOn: "准备发货",
+    shipReadyOff: "暂未发货",
+    shipReadyOnBadge: "ON",
+    shipReadyOffBadge: "OFF",
+    shipConfirmTitleOn: "切换到「准备发货」模式？",
+    shipConfirmBodyOn: "首页主按钮会变成「我有一本」，老用户可以登录领书。",
+    shipConfirmTitleOff: "切换回「暂未发货」模式？",
+    shipConfirmBodyOff: "首页主按钮会变成「我想要」，新用户会看到候补名单二维码。",
+    shipConfirmCta: "确认切换",
+    shipToggleFailed: "切换失败，请稍后再试",
   },
   langSwitch: {
     label: "语言",
@@ -192,7 +223,26 @@ type CopyShape = {
     title: string;
     subtitle: string;
     primaryCta: string;
+    waitlistCta: string;
     secondaryCta: string;
+  };
+  waitlist: {
+    title: string;
+    qrCaption: string;
+    qrAlt: string;
+    nicknameLabel: string;
+    nicknamePlaceholder: string;
+    nicknameHint: string;
+    nicknameRequired: string;
+    nicknameTooLong: string;
+    nicknameTaken: string;
+    nicknameAvailable: string;
+    nicknameChecking: string;
+    downloadCta: string;
+    downloadPending: string;
+    downloadFailed: string;
+    notConfigured: string;
+    joined: string;
   };
   progress: {
     of: string;
@@ -303,6 +353,18 @@ type CopyShape = {
     resetConfirmCta: string;
     resetSuccess: string;
     resetFailed: string;
+    shipToggleTitle: string;
+    shipToggleHint: string;
+    shipReadyOn: string;
+    shipReadyOff: string;
+    shipReadyOnBadge: string;
+    shipReadyOffBadge: string;
+    shipConfirmTitleOn: string;
+    shipConfirmBodyOn: string;
+    shipConfirmTitleOff: string;
+    shipConfirmBodyOff: string;
+    shipConfirmCta: string;
+    shipToggleFailed: string;
   };
   langSwitch: { label: string; zh: string; en: string };
   common: { cancel: string; close: string; saving: string; loading: string };

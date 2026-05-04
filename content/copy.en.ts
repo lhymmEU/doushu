@@ -15,7 +15,26 @@ export const en: Copy = {
     subtitle:
       "A handmade mini-book that hangs from a keychain. Gather three thousand and we go to print — mailed from Wuhan to your hands.",
     primaryCta: "I have a copy",
+    waitlistCta: "I want one",
     secondaryCta: "About the project",
+  },
+  waitlist: {
+    title: "Join the Xiaohongshu group",
+    qrCaption: "Scan the QR code to join the Xiaohongshu group and follow live updates.",
+    qrAlt: "Xiaohongshu group QR code",
+    nicknameLabel: "Your nickname",
+    nicknamePlaceholder: "What should we call you?",
+    nicknameHint: "We use this to hold a spot for you on the wall and the shipping list.",
+    nicknameRequired: "Please enter a nickname",
+    nicknameTooLong: "Nickname must be 40 characters or fewer",
+    nicknameTaken: "Already taken — try another?",
+    nicknameAvailable: "Available",
+    nicknameChecking: "Checking…",
+    downloadCta: "Save QR code",
+    downloadPending: "Saving…",
+    downloadFailed: "Couldn't save. Please try again.",
+    notConfigured: "The waitlist isn't open yet. Please check back soon.",
+    joined: "You're on the list — QR code is downloading.",
   },
   progress: {
     of: "sold of",
@@ -176,6 +195,21 @@ export const en: Copy = {
     resetConfirmCta: "I'm sure — reset",
     resetSuccess: "Archived {n} serials",
     resetFailed: "Reset failed",
+    shipToggleTitle: "Shipping mode",
+    shipToggleHint:
+      "Switches the homepage CTA: 'I want one' before launch, 'I have a copy' once books are shipping.",
+    shipReadyOn: "Shipping live",
+    shipReadyOff: "Not shipping yet",
+    shipReadyOnBadge: "ON",
+    shipReadyOffBadge: "OFF",
+    shipConfirmTitleOn: "Switch to 'shipping live'?",
+    shipConfirmBodyOn:
+      "The homepage CTA becomes 'I have a copy' so existing buyers can sign in.",
+    shipConfirmTitleOff: "Switch back to 'not shipping yet'?",
+    shipConfirmBodyOff:
+      "The homepage CTA becomes 'I want one' and new visitors see the waitlist QR.",
+    shipConfirmCta: "Confirm switch",
+    shipToggleFailed: "Could not switch — please try again.",
   },
   langSwitch: {
     label: "Language",

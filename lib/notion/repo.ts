@@ -16,6 +16,8 @@ import {
 import { padSerial, TOTAL_GOAL } from "@/lib/format";
 import { generateMagicWord, normalizeMagicWord } from "@/lib/words";
 
+import { NICKNAMES_TAG } from "./waitlist";
+
 export const WALL_TAG = "doushu-wall";
 export const COUNT_TAG = "doushu-count";
 export const PAGE_TAG = (id: string) => `doushu-page-${id}`;
@@ -276,6 +278,9 @@ export async function saveProfile(
   });
   bustWall();
   bustCounts();
+  // A buyer just claimed/changed a nickname — invalidate the cached
+  // uniqueness set so the waitlist sees fresh data on its next check.
+  revalidateTag(NICKNAMES_TAG, "max");
 }
 
 export async function requestExchange(

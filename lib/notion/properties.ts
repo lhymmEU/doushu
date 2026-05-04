@@ -113,3 +113,40 @@ export function checkbox(value: boolean) {
 export function number(value: number) {
   return { number: value };
 }
+
+/* ─────────── Doushu Settings (single-row config DB) ─────────── */
+
+export type SettingsRow = {
+  pageId: string;
+  key: string;
+  readyToShip: boolean;
+};
+
+export function rowFromSettingsPage(page: NotionPage): SettingsRow {
+  const p = page.properties;
+  return {
+    pageId: page.id,
+    key: readRichText(p["Key"]).trim(),
+    readyToShip: readCheckbox(p["Ready To Ship"]),
+  };
+}
+
+/* ─────────── Doushu Waitlist ─────────── */
+
+export type WaitlistRow = {
+  pageId: string;
+  nickname: string;
+  nicknameLower: string;
+  createdAt: string;
+};
+
+export function rowFromWaitlistPage(page: NotionPage): WaitlistRow {
+  const p = page.properties;
+  return {
+    pageId: page.id,
+    nickname: readRichText(p["Nickname"]).trim(),
+    nicknameLower: readRichText(p["Nickname Lower"]).trim().toLowerCase(),
+    createdAt:
+      readCreatedTime(p["Created At"]) ?? page.created_time ?? new Date().toISOString(),
+  };
+}

@@ -49,6 +49,8 @@ All variables live in `.env.local` (gitignored). See `.env.example` for the temp
 | `NOTION_DATA_SOURCE_ID`   |    ✅    | The data-source UUID for the same database (Notion 2025-09-03 API). The admin panel and all queries use this.                                                    |
 | `NOTION_PARENT_PAGE_ID`   |    ✅    | The 32-char ID of the parent page that holds the database. Lets the admin "Open in Notion" link work.                                                            |
 | `NOTION_PARENT_PAGE_URL`  |    ✅    | Full URL of the parent Notion page (`https://www.notion.so/<id>` or your custom slug). Linked from `/admin`.                                                     |
+| `NOTION_SETTINGS_DATA_SOURCE_ID` | ⚠️ | Data-source UUID for the single-row `Doushu Settings` database. Drives the admin "ready to ship" toggle. If missing, the site stays in "not ready to ship" mode. |
+| `NOTION_WAITLIST_DATA_SOURCE_ID` | ⚠️ | Data-source UUID for the `Doushu Waitlist` database. Required for the `我想要` waitlist drawer. If missing, joining the waitlist returns a friendly error.        |
 | `ADMIN_PASSWORD`          |    ✅    | Password gating `/admin`. Pick something long. Hashed in transit, compared with `timingSafeEqual`.                                                               |
 | `SESSION_SECRET`          |    ✅    | 32+ random bytes used to HMAC-sign buyer + admin cookies (JOSE HS256). Generate with `openssl rand -base64 32`.                                                  |
 
@@ -111,7 +113,47 @@ curl https://api.notion.com/v1/databases/$NOTION_DATABASE_ID \
 
 Or, easier: in the Notion **MCP** plugin, the database response includes `data_sources[].id`. Paste that UUID in.
 
-### 6. Generate `SESSION_SECRET` and pick `ADMIN_PASSWORD`
+### 6. Settings & Waitlist databases (pre-launch flow)
+
+Two extra single-purpose databases power the admin **Ready to Ship** toggle and the buyer-side **`我想要`** waitlist drawer. Create both inline under the same `Doushu · 豆书` parent page so the `Doushu` integration already has access.
+
+#### `Doushu Settings` (single-row config)
+
+| Property         | Type     | Notes                                                                                  |
+| ---------------- | -------- | -------------------------------------------------------------------------------------- |
+| `Key`            | Title    | Always `site` for the one and only row                                                  |
+| `Ready To Ship`  | Checkbox | `true` flips the home CTA back to `我有一本`; `false` (default) shows `我想要`         |
+
+Seed the database with exactly one row: `Key = site`, `Ready To Ship = unchecked`. The admin toggle at `/admin` updates this row in place; everything else (the home CTA, the waitlist drawer, the My Book sheet) reads from it via `'use cache'` + `revalidateTag('doushu-settings')`.
+
+#### `Doushu Waitlist`
+
+| Property         | Type        | Notes                                                                  |
+| ---------------- | ----------- | ---------------------------------------------------------------------- |
+| `Nickname`       | Title       | The buyer-supplied nickname, exactly as typed                          |
+| `Nickname Lower` | Text        | Trimmed, lower-cased copy used for fast case-insensitive uniqueness    |
+| `Created At`     | Created time |                                                                        |
+
+Each `Download QR` click in the waitlist drawer creates one row here. Nickname uniqueness is enforced **across both `Doushu Waitlist` and `Doushu Serials`** (case-insensitive, trimmed) so a waitlist nickname can't collide with an existing buyer.
+
+#### Capture the data-source IDs
+
+For each new database, grab the data-source UUID the same way as `NOTION_DATA_SOURCE_ID`:
+
+```bash
+curl https://api.notion.com/v1/databases/<SETTINGS_OR_WAITLIST_DB_ID> \
+  -H "Authorization: Bearer $NOTION_TOKEN" \
+  -H "Notion-Version: 2025-09-03" | jq '.data_sources[0].id'
+```
+
+Then set:
+
+- `NOTION_SETTINGS_DATA_SOURCE_ID=<settings data-source uuid>`
+- `NOTION_WAITLIST_DATA_SOURCE_ID=<waitlist data-source uuid>`
+
+Both are optional — if missing, the home page silently stays in "not ready to ship" mode and the waitlist drawer surfaces a friendly "not configured" error instead of crashing.
+
+### 7. Generate `SESSION_SECRET` and pick `ADMIN_PASSWORD`
 
 ```bash
 openssl rand -base64 32        # → SESSION_SECRET
@@ -119,7 +161,7 @@ openssl rand -base64 32        # → SESSION_SECRET
 
 Choose a long random string for `ADMIN_PASSWORD`.
 
-### 7. Done — restart `next dev`
+### 8. Done — restart `next dev`
 
 The homepage will show real counts; `/admin` will let you issue your first serial.
 

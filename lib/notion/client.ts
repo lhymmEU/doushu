@@ -31,10 +31,38 @@ export function dataSourceId(): string {
   return id;
 }
 
+export function settingsDataSourceId(): string {
+  const id = process.env.NOTION_SETTINGS_DATA_SOURCE_ID;
+  if (!id) {
+    throw new Error(
+      "[Doushu] NOTION_SETTINGS_DATA_SOURCE_ID is not set. The Doushu Settings database has not been provisioned — see README.md (Settings & Waitlist databases)."
+    );
+  }
+  return id;
+}
+
+export function waitlistDataSourceId(): string {
+  const id = process.env.NOTION_WAITLIST_DATA_SOURCE_ID;
+  if (!id) {
+    throw new Error(
+      "[Doushu] NOTION_WAITLIST_DATA_SOURCE_ID is not set. The Doushu Waitlist database has not been provisioned — see README.md (Settings & Waitlist databases)."
+    );
+  }
+  return id;
+}
+
 export function parentPageUrl(): string {
   return process.env.NOTION_PARENT_PAGE_URL ?? "https://www.notion.so";
 }
 
 export function isNotionConfigured(): boolean {
   return Boolean(process.env.NOTION_TOKEN && process.env.NOTION_DATA_SOURCE_ID);
+}
+
+export function isSettingsConfigured(): boolean {
+  return Boolean(process.env.NOTION_TOKEN && process.env.NOTION_SETTINGS_DATA_SOURCE_ID);
+}
+
+export function isWaitlistConfigured(): boolean {
+  return Boolean(process.env.NOTION_TOKEN && process.env.NOTION_WAITLIST_DATA_SOURCE_ID);
 }

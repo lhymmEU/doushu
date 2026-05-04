@@ -10,6 +10,7 @@ import { ProgressMeter } from "./ProgressMeter";
 import { SegmentedTabs } from "./SegmentedTabs";
 import { SignInSheet } from "@/components/sheets/SignInSheet";
 import { MyBookSheet } from "@/components/sheets/MyBookSheet";
+import { WaitlistSheet } from "@/components/sheets/WaitlistSheet";
 import { AboutPanel, HowPanel, FaqPanel } from "@/components/sheets/InfoPanels";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
@@ -21,22 +22,38 @@ export function HeroShell({
   sold,
   goal,
   isSignedIn,
+  isShipReady,
   wall,
 }: {
   sold: number;
   goal: number;
   isSignedIn: boolean;
+  isShipReady: boolean;
   wall: React.ReactNode;
 }) {
   const t = useT();
   const [signInOpen, setSignInOpen] = useState(false);
   const [myBookOpen, setMyBookOpen] = useState(false);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
+  // When the site isn't shipping yet, anonymous visitors land on the
+  // waitlist drawer. Signed-in buyers (rare in pre-launch mode) keep
+  // their My Book flow.
   function openPrimary() {
+    if (!isShipReady && !isSignedIn) {
+      setWaitlistOpen(true);
+      return;
+    }
     if (isSignedIn) setMyBookOpen(true);
     else setSignInOpen(true);
   }
+
+  const primaryLabel = isSignedIn
+    ? t.myBook.title
+    : isShipReady
+      ? t.hero.primaryCta
+      : t.hero.waitlistCta;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
@@ -80,7 +97,7 @@ export function HeroShell({
           className="h-12 flex-1 rounded-full bg-ink text-paper text-[15px] tracking-wider hover:bg-ink/90"
         >
           <Sparkles className="h-4 w-4" />
-          {isSignedIn ? t.myBook.title : t.hero.primaryCta}
+          {primaryLabel}
         </Button>
         <Button
           type="button"
@@ -109,6 +126,7 @@ export function HeroShell({
         onSignedIn={() => setMyBookOpen(true)}
       />
       <MyBookSheet open={myBookOpen} onOpenChange={setMyBookOpen} />
+      <WaitlistSheet open={waitlistOpen} onOpenChange={setWaitlistOpen} />
 
       {/* About sheet uses the same panel content but in a quick sheet overlay */}
       <AboutQuickSheet open={aboutOpen} onOpenChange={setAboutOpen} />

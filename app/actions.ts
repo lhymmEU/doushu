@@ -27,6 +27,13 @@ import {
   signAdmin,
   signBuyer,
 } from "@/lib/auth/session";
+import { readShipReady, setShipReady } from "@/lib/notion/settings";
+import {
+  addToWaitlist,
+  isNicknameTaken,
+  isWaitlistConfigured,
+  normalizeNickname,
+} from "@/lib/notion/waitlist";
 
 /* ─────────── shared types ─────────── */
 
@@ -345,6 +352,112 @@ export async function listAllSerialsAction(): Promise<
     return {
       ok: false,
       error: e instanceof Error ? e.message : "list_failed",
+    };
+  }
+}
+
+/* ─────────── ship-ready toggle + waitlist ─────────── */
+
+const setReadyToShipSchema = z.object({
+  ready: z.boolean(),
+  // Client must echo back `true` after the user clicks the confirm dialog.
+  // Defense-in-depth in addition to the UI prompt.
+  confirm: z.literal(true),
+});
+
+export async function setReadyToShipAction(
+  input: z.infer<typeof setReadyToShipSchema>
+): Promise<ActionResult<{ ready: boolean }>> {
+  if (!(await readAdmin())) return { ok: false, error: "unauthorized" };
+  const parsed = setReadyToShipSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "unconfirmed" };
+
+  try {
+    await setShipReady(parsed.data.ready);
+  } catch (e) {
+    console.error("[actions] setReadyToShip failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "ship_toggle_failed",
+    };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/admin");
+  return { ok: true, data: { ready: parsed.data.ready } };
+}
+
+export async function getReadyToShipAction(): Promise<
+  ActionResult<{ ready: boolean }>
+> {
+  try {
+    const ready = await readShipReady();
+    return { ok: true, data: { ready } };
+  } catch (e) {
+    console.error("[actions] getReadyToShip failed", e);
+    return { ok: true, data: { ready: false } };
+  }
+}
+
+const nicknameSchema = z.object({
+  nickname: z.string().trim().min(1, "nickname_required").max(40, "nickname_too_long"),
+});
+
+export async function checkNicknameAvailableAction(
+  input: z.infer<typeof nicknameSchema>
+): Promise<ActionResult<{ available: boolean; nickname: string }>> {
+  const parsed = nicknameSchema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { ok: false, error: issue?.message ?? "invalid_input" };
+  }
+
+  if (!isWaitlistConfigured()) {
+    return { ok: false, error: "not_configured" };
+  }
+
+  try {
+    const taken = await isNicknameTaken(parsed.data.nickname);
+    return {
+      ok: true,
+      data: {
+        available: !taken,
+        nickname: normalizeNickname(parsed.data.nickname),
+      },
+    };
+  } catch (e) {
+    console.error("[actions] checkNicknameAvailable failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "check_failed",
+    };
+  }
+}
+
+export async function joinWaitlistAction(
+  input: z.infer<typeof nicknameSchema>
+): Promise<ActionResult<{ pageId: string }>> {
+  const parsed = nicknameSchema.safeParse(input);
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    return { ok: false, error: issue?.message ?? "invalid_input" };
+  }
+
+  if (!isWaitlistConfigured()) {
+    return { ok: false, error: "not_configured" };
+  }
+
+  try {
+    const result = await addToWaitlist(parsed.data.nickname);
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
+    return { ok: true, data: { pageId: result.pageId } };
+  } catch (e) {
+    console.error("[actions] joinWaitlist failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "waitlist_failed",
     };
   }
 }
