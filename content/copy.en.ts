@@ -35,6 +35,8 @@ export const en: Copy = {
     downloadFailed: "Couldn't save. Please try again.",
     notConfigured: "The waitlist isn't open yet. Please check back soon.",
     joined: "You're on the list — QR code is downloading.",
+    joinedWithSerial:
+      "You're on the wall · Serial #{serial} · QR code is downloading",
   },
   progress: {
     of: "sold of",
@@ -140,7 +142,7 @@ export const en: Copy = {
     ],
   },
   wall: {
-    title: "Wall of buyers",
+    title: "Wall of wishes",
     empty: "No one's left their name yet — you could be the first.",
     recent: "Just joined",
   },
@@ -162,6 +164,7 @@ export const en: Copy = {
       "Day-to-day edits (addresses, shipping marks, fixes) all happen in Notion.",
     sold: "Issued",
     completed: "Profiles complete",
+    wished: "Wished",
     exchanges: "Printed-book requests",
     signOut: "Sign out",
     batchTitle: "Batch issue",

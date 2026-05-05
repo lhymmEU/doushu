@@ -50,7 +50,7 @@ All variables live in `.env.local` (gitignored). See `.env.example` for the temp
 | `NOTION_PARENT_PAGE_ID`   |    ✅    | The 32-char ID of the parent page that holds the database. Lets the admin "Open in Notion" link work.                                                            |
 | `NOTION_PARENT_PAGE_URL`  |    ✅    | Full URL of the parent Notion page (`https://www.notion.so/<id>` or your custom slug). Linked from `/admin`.                                                     |
 | `NOTION_SETTINGS_DATA_SOURCE_ID` | ⚠️ | Data-source UUID for the single-row `Doushu Settings` database. Drives the admin "ready to ship" toggle. If missing, the site stays in "not ready to ship" mode. |
-| `NOTION_WAITLIST_DATA_SOURCE_ID` | ⚠️ | Data-source UUID for the `Doushu Waitlist` database. Required for the `我想要` waitlist drawer. If missing, joining the waitlist returns a friendly error.        |
+| ~~`NOTION_WAITLIST_DATA_SOURCE_ID`~~ | — | **Deprecated.** Wishlist signups now write into `Doushu Serials` as `Wished` rows, so a separate waitlist database is no longer needed. The variable is no longer read; you can remove it from `.env.local`. |
 | `ADMIN_PASSWORD`          |    ✅    | Password gating `/admin`. Pick something long. Hashed in transit, compared with `timingSafeEqual`.                                                               |
 | `SESSION_SECRET`          |    ✅    | 32+ random bytes used to HMAC-sign buyer + admin cookies (JOSE HS256). Generate with `openssl rand -base64 32`.                                                  |
 
@@ -95,7 +95,7 @@ Inside the parent page, add an inline database called **Doushu Serials** with **
 | `Address`             | Text        | Optional, for printed-book exchange                                                    |
 | `Wants Printed Book`  | Checkbox    |                                                                                        |
 | `Show on Wall`        | Checkbox    | Buyer toggles this in `MyBookSheet`                                                    |
-| `Status`              | Select      | Options: `Issued`, `Profile Complete`, `Exchange Requested`, `Shipped`, `Delivered`, `Cancelled` (postage is collected on delivery; the buyer self-confirms receipt to move `Shipped` → `Delivered`) |
+| `Status`              | Select      | Options: `Wished`, `Issued`, `Profile Complete`, `Exchange Requested`, `Shipped`, `Delivered`, `Cancelled`. `Wished` is the entry point for waitlist signups (auto-created via the `我想要` QR drawer); `Issued` is the entry point for admin pre-issuance. Both converge once the buyer signs in and saves a profile (postage is collected on delivery; the buyer self-confirms receipt to move `Shipped` → `Delivered`) |
 | `Issued At`           | Created time |                                                                                        |
 | `Updated At`          | Last edited time |                                                                                    |
 
@@ -113,9 +113,9 @@ curl https://api.notion.com/v1/databases/$NOTION_DATABASE_ID \
 
 Or, easier: in the Notion **MCP** plugin, the database response includes `data_sources[].id`. Paste that UUID in.
 
-### 6. Settings & Waitlist databases (pre-launch flow)
+### 6. Settings database (pre-launch flow)
 
-Two extra single-purpose databases power the admin **Ready to Ship** toggle and the buyer-side **`我想要`** waitlist drawer. Create both inline under the same `Doushu · 豆书` parent page so the `Doushu` integration already has access.
+One extra single-purpose database powers the admin **Ready to Ship** toggle. Create it inline under the same `Doushu · 豆书` parent page so the `Doushu` integration already has access.
 
 #### `Doushu Settings` (single-row config)
 
@@ -126,22 +126,14 @@ Two extra single-purpose databases power the admin **Ready to Ship** toggle and 
 
 Seed the database with exactly one row: `Key = site`, `Ready To Ship = unchecked`. The admin toggle at `/admin` updates this row in place; everything else (the home CTA, the waitlist drawer, the My Book sheet) reads from it via `'use cache'` + `revalidateTag('doushu-settings')`.
 
-#### `Doushu Waitlist`
+> **Where did `Doushu Waitlist` go?** It used to be a separate database for the `我想要` drawer, but waitlist signups now write into `Doushu Serials` directly as `Wished` rows. Nickname uniqueness, the wall, and the lifecycle all flow through the single serials DB. If you have an old `Doushu Waitlist` database lying around, you can archive it — the code no longer reads from it.
 
-| Property         | Type        | Notes                                                                  |
-| ---------------- | ----------- | ---------------------------------------------------------------------- |
-| `Nickname`       | Title       | The buyer-supplied nickname, exactly as typed                          |
-| `Nickname Lower` | Text        | Trimmed, lower-cased copy used for fast case-insensitive uniqueness    |
-| `Created At`     | Created time |                                                                        |
+#### Capture the data-source ID
 
-Each `Download QR` click in the waitlist drawer creates one row here. Nickname uniqueness is enforced **across both `Doushu Waitlist` and `Doushu Serials`** (case-insensitive, trimmed) so a waitlist nickname can't collide with an existing buyer.
-
-#### Capture the data-source IDs
-
-For each new database, grab the data-source UUID the same way as `NOTION_DATA_SOURCE_ID`:
+Grab the settings data-source UUID the same way as `NOTION_DATA_SOURCE_ID`:
 
 ```bash
-curl https://api.notion.com/v1/databases/<SETTINGS_OR_WAITLIST_DB_ID> \
+curl https://api.notion.com/v1/databases/<SETTINGS_DB_ID> \
   -H "Authorization: Bearer $NOTION_TOKEN" \
   -H "Notion-Version: 2025-09-03" | jq '.data_sources[0].id'
 ```
@@ -149,9 +141,8 @@ curl https://api.notion.com/v1/databases/<SETTINGS_OR_WAITLIST_DB_ID> \
 Then set:
 
 - `NOTION_SETTINGS_DATA_SOURCE_ID=<settings data-source uuid>`
-- `NOTION_WAITLIST_DATA_SOURCE_ID=<waitlist data-source uuid>`
 
-Both are optional — if missing, the home page silently stays in "not ready to ship" mode and the waitlist drawer surfaces a friendly "not configured" error instead of crashing.
+Optional — if missing, the home page silently stays in "not ready to ship" mode.
 
 ### 7. Generate `SESSION_SECRET` and pick `ADMIN_PASSWORD`
 
@@ -169,10 +160,35 @@ The homepage will show real counts; `/admin` will let you issue your first seria
 
 ## Day-to-day workflow for the publisher
 
+There are two ways a row enters `Doushu Serials`:
+
+**Path A — Pre-launch waitlist (`我想要` QR drawer)**
+
+1. Visitor opens the site, taps `我想要`, types a nickname, taps `保存二维码`.
+2. The action auto-issues the next serial, generates a magic word, and writes a row with `Status = Wished`, `Nickname = <them>`, `Show on Wall = true`. Their chip appears on `心愿墙` immediately as a dashed/ghost book showing the reserved serial.
+3. The QR code downloads and the toast confirms `已加入心愿墙 · 编号 0042 · 二维码已开始下载`.
+4. Later, when you actually deliver a book to that person:
+   - Look them up in admin (or directly in Notion) to read their reserved serial + magic word. Hand them the matching physical book + magic-word card.
+   - They sign in with that pair, fill contact info → `Status` moves to `Profile Complete`.
+   - You mark them `Shipped` in Notion when the book leaves your hands.
+   - They tap **Confirm receipt** in `My book` → `Status` becomes `Delivered` → their wall chip gains a green ✓ badge ("wish fulfilled").
+
+**Path B — Ad-hoc offline sale**
+
 1. Buyer pays via WeChat (offline).
-2. You open `/admin`, click **Issue next serial** → Notion gets a new row, the screen prints a card with serial + magic word. Hand the card to the buyer with their mini-book.
+2. You open `/admin`, click **Issue next serial** → Notion gets a new row with `Status = Issued` and an empty nickname. The screen prints a card with serial + magic word. Hand the card to the buyer with their mini-book.
 3. Buyer opens the site, signs in with the serial + magic word, and fills in their profile. They can opt in to the public wall and request a printed copy.
-4. To mark someone as `Shipped`, edit the row directly in Notion (the in-app admin stays minimal on purpose). The site will pick up the change within ~60s thanks to `cacheLife({ revalidate: 60 })`, or instantly if you trigger a revalidation.
+4. From here it converges with Path A: `Profile Complete` → `Shipped` → `Delivered`.
+
+**Which is which on the wall?**
+
+- `Wished` → outlined dashed book chip with serial in muted ink. Reads as "reserved, not delivered yet".
+- `Profile Complete` / `Exchange Requested` / `Shipped` → solid colourful book chip with serial. Book is in the pipeline.
+- `Delivered` → solid book chip with a green ✓ in the corner. Wish fulfilled.
+
+To mark someone as `Shipped`, edit the row directly in Notion (the in-app admin stays minimal on purpose). The site picks up the change within ~60s thanks to `cacheLife({ revalidate: 60 })`, or instantly if you trigger a revalidation.
+
+> **Note on the 3000 cap.** It's a printing target, not a hard cap. Both flows just call `highestSerial() + 1`, so the next serial keeps incrementing — you can have more than 3000 wishes on the wall, and the meter just visually tops out at the goal.
 
 ---
 
@@ -184,7 +200,7 @@ The homepage will show real counts; `/admin` will let you issue your first seria
 - **`components/wall/`** — server-rendered `BuyerWall` + `BookChip`.
 - **`components/admin/`** — `AdminLogin`, `SerialPanel`.
 - **`components/system/`** — `LangShell` + `LangSync` so the cookie-based language read can sit inside a `<Suspense>` boundary required by `cacheComponents`.
-- **`lib/notion/`** — `client.ts` (singleton), `properties.ts` (page ↔ row adapter), `repo.ts` (cached reads via `'use cache'`, writes that `revalidateTag('max', ...)`).
+- **`lib/notion/`** — `client.ts` (singleton), `properties.ts` (page ↔ row adapter), `repo.ts` (cached reads via `'use cache'` + writes that `revalidateTag('max', ...)`), `waitlist.ts` (nickname uniqueness only — wishes themselves live in serials), `tags.ts` (shared cache-tag constants), `settings.ts` (ship-ready toggle).
 - **`lib/auth/session.ts`** — JOSE-signed buyer + admin cookies.
 - **`lib/i18n.tsx`** + **`lib/server-i18n.ts`** + **`content/copy.{zh,en}.ts`** — i18n.
 - **`lib/words.ts`** — magic word generator (`adj-noun`, ~100×100 combinations, normalized for comparison).

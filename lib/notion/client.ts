@@ -41,16 +41,6 @@ export function settingsDataSourceId(): string {
   return id;
 }
 
-export function waitlistDataSourceId(): string {
-  const id = process.env.NOTION_WAITLIST_DATA_SOURCE_ID;
-  if (!id) {
-    throw new Error(
-      "[Doushu] NOTION_WAITLIST_DATA_SOURCE_ID is not set. The Doushu Waitlist database has not been provisioned — see README.md (Settings & Waitlist databases)."
-    );
-  }
-  return id;
-}
-
 export function parentPageUrl(): string {
   return process.env.NOTION_PARENT_PAGE_URL ?? "https://www.notion.so";
 }
@@ -63,6 +53,12 @@ export function isSettingsConfigured(): boolean {
   return Boolean(process.env.NOTION_TOKEN && process.env.NOTION_SETTINGS_DATA_SOURCE_ID);
 }
 
+/**
+ * Whether the waitlist (`我想要`) flow can write. Wishes now live in the
+ * serials DB, so this is just an alias for the core Notion config —
+ * kept for backwards compatibility with callers that still gate on it.
+ * `NOTION_WAITLIST_DATA_SOURCE_ID` is no longer read.
+ */
 export function isWaitlistConfigured(): boolean {
-  return Boolean(process.env.NOTION_TOKEN && process.env.NOTION_WAITLIST_DATA_SOURCE_ID);
+  return isNotionConfigured();
 }

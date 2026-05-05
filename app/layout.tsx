@@ -1,22 +1,36 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { Suspense } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LangShell } from "@/components/system/LangShell";
 import "./globals.css";
 
-const display = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+// Self-hosted via `next/font/local` instead of `next/font/google`. The
+// google variant tries to fetch from fonts.gstatic.com at build/dev time,
+// which is slow + flaky in mainland China and was breaking `next dev`
+// (Turbopack would time out and fail to resolve
+// `@vercel/turbopack-next/internal/font/google/font`). Source files live
+// in `app/fonts/` — Inter Variable (latin, weight axis 100-900) and three
+// Cormorant Garamond weights from the `@fontsource` mirror on jsDelivr.
+const display = localFont({
+  src: [
+    { path: "./fonts/cormorant-garamond-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/cormorant-garamond-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/cormorant-garamond-600.woff2", weight: "600", style: "normal" },
+  ],
   variable: "--font-display",
   display: "swap",
+  adjustFontFallback: "Times New Roman",
 });
 
-const sans = Inter({
-  subsets: ["latin"],
+const sans = localFont({
+  src: "./fonts/inter-variable-latin.woff2",
+  weight: "100 900",
+  style: "normal",
   variable: "--font-sans",
   display: "swap",
+  adjustFontFallback: "Arial",
 });
 
 export const metadata: Metadata = {

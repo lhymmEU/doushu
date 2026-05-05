@@ -23,6 +23,10 @@ export function StatusTimeline({
   const t = useT();
 
   const labels: Record<SerialStatus, string> = {
+    // "Wished" reuses the "Issued" label — both mean "you have a slot,
+    // book hasn't been delivered yet". The timeline collapses them so
+    // wished users and admin-issued users see the same visual journey.
+    Wished: t.myBook.timeline.issued,
     Issued: t.myBook.timeline.issued,
     "Profile Complete": t.myBook.timeline.profileComplete,
     "Exchange Requested": t.myBook.timeline.exchangeRequested,
@@ -31,6 +35,7 @@ export function StatusTimeline({
   };
 
   const icons: Record<SerialStatus, React.ReactNode> = {
+    Wished: <Circle className="h-3 w-3" />,
     Issued: <Circle className="h-3 w-3" />,
     "Profile Complete": <Check className="h-3 w-3" />,
     "Exchange Requested": <BookHeart className="h-3 w-3" />,
@@ -38,8 +43,13 @@ export function StatusTimeline({
     Delivered: <PackageCheck className="h-3 w-3" />,
   };
 
+  // Map "Wished" to the same slot as "Issued" so currentIdx lands on the
+  // first step for waitlist-originated rows.
+  const effectiveStatus: SerialStatus =
+    status === "Wished" ? "Issued" : status;
+
   const visible = wantsExchange ? ORDER : ORDER.slice(0, 2);
-  const currentIdx = visible.indexOf(status);
+  const currentIdx = visible.indexOf(effectiveStatus);
 
   return (
     <ol className="relative ml-2 border-l border-hairline pl-5">

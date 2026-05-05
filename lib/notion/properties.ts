@@ -43,6 +43,11 @@ function readCreatedTime(prop: unknown): string | null {
 }
 
 export type SerialStatus =
+  // Auto-created by a waitlist signup. Has nickname + auto-generated magic
+  // word, but no contact details and no physical book yet — it's a wish.
+  | "Wished"
+  // Admin-issued via /admin. Magic word printed on a card; nickname is
+  // empty until the buyer signs in and fills their profile.
   | "Issued"
   | "Profile Complete"
   | "Exchange Requested"

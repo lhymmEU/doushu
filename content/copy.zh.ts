@@ -33,6 +33,7 @@ export const zh = ({
     downloadFailed: "保存失败，请稍后再试",
     notConfigured: "暂未开通候补名单，敬请期待。",
     joined: "已加入候补，二维码已开始下载",
+    joinedWithSerial: "已加入心愿墙 · 编号 {serial} · 二维码已开始下载",
   },
   progress: {
     of: "已售 / 共",
@@ -158,6 +159,7 @@ export const zh = ({
     notionHint: "其余日常工作（修改地址、标记发货、补正信息）都在 Notion 里完成。",
     sold: "已派发",
     completed: "已完成资料",
+    wished: "心愿",
     exchanges: "纸书申请",
     signOut: "退出",
     batchTitle: "批量派发",
@@ -243,6 +245,7 @@ type CopyShape = {
     downloadFailed: string;
     notConfigured: string;
     joined: string;
+    joinedWithSerial: string;
   };
   progress: {
     of: string;
@@ -322,6 +325,7 @@ type CopyShape = {
     notionHint: string;
     sold: string;
     completed: string;
+    wished: string;
     exchanges: string;
     signOut: string;
     batchTitle: string;

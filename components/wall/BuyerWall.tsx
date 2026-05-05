@@ -4,8 +4,16 @@ import { getCopy } from "@/lib/server-i18n";
 import { BookChip } from "./BookChip";
 
 /**
- * Server component. Reads from cached Notion query.
- * Falls back gracefully if Notion isn't configured yet.
+ * Server component. Reads from the (cached) serials DB and renders one
+ * chip per buyer/wisher. The waitlist used to live in a separate Notion
+ * DB; it has since been folded into the serials DB so a wishlist signup
+ * IS a serial reservation. That removes the duplication where the same
+ * person could appear once as a wish and once as a buyer.
+ *
+ * BookChip handles the per-status visual:
+ * - Wished     → outlined ghost card with serial in muted ink
+ * - in-pipeline → solid colourful card with serial
+ * - Delivered   → solid card + green ✓ badge ("wish fulfilled")
  */
 export async function BuyerWall() {
   const t = await getCopy();
@@ -22,7 +30,7 @@ export async function BuyerWall() {
   try {
     rows = await listWall();
   } catch (e) {
-    console.error("[wall] failed", e);
+    console.error("[wall] listWall failed", e);
   }
 
   if (rows.length === 0) {
@@ -45,7 +53,12 @@ export async function BuyerWall() {
           </div>
           <div className="grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-6">
             {recent.map((r) => (
-              <BookChip key={r.pageId} serial={r.serial} nickname={r.nickname} />
+              <BookChip
+                key={r.pageId}
+                serial={r.serial}
+                nickname={r.nickname}
+                status={r.status}
+              />
             ))}
           </div>
         </section>
@@ -56,7 +69,12 @@ export async function BuyerWall() {
           <div className="hairline mb-4" />
           <div className="grid grid-cols-4 gap-x-2 gap-y-4 sm:grid-cols-6">
             {rest.map((r) => (
-              <BookChip key={r.pageId} serial={r.serial} nickname={r.nickname} />
+              <BookChip
+                key={r.pageId}
+                serial={r.serial}
+                nickname={r.nickname}
+                status={r.status}
+              />
             ))}
           </div>
         </section>

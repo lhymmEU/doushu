@@ -177,7 +177,11 @@ export function WaitlistSheet({
       }
       try {
         await downloadQrBlob();
-        toast.success(t.waitlist.joined);
+        // Show the reserved serial in the success toast so the user knows
+        // they have a real spot, not just an entry in a list.
+        toast.success(
+          t.waitlist.joinedWithSerial.replace("{serial}", r.data.serialDisplay)
+        );
         onOpenChange(false);
       } catch (err) {
         console.error("[waitlist] qr download failed", err);

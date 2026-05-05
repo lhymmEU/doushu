@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import {
   cancelExchange,
+  claimWishedSerial,
   confirmDelivery,
   findByCredentials,
   getByPageId,
@@ -29,11 +30,11 @@ import {
 } from "@/lib/auth/session";
 import { readShipReady, setShipReady } from "@/lib/notion/settings";
 import {
-  addToWaitlist,
+  bustNicknames,
   isNicknameTaken,
-  isWaitlistConfigured,
   normalizeNickname,
 } from "@/lib/notion/waitlist";
+import { isNotionConfigured } from "@/lib/notion/client";
 
 /* ─────────── shared types ─────────── */
 
@@ -412,7 +413,7 @@ export async function checkNicknameAvailableAction(
     return { ok: false, error: issue?.message ?? "invalid_input" };
   }
 
-  if (!isWaitlistConfigured()) {
+  if (!isNotionConfigured()) {
     return { ok: false, error: "not_configured" };
   }
 
@@ -436,23 +437,45 @@ export async function checkNicknameAvailableAction(
 
 export async function joinWaitlistAction(
   input: z.infer<typeof nicknameSchema>
-): Promise<ActionResult<{ pageId: string }>> {
+): Promise<
+  ActionResult<{ pageId: string; serial: number; serialDisplay: string }>
+> {
   const parsed = nicknameSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     return { ok: false, error: issue?.message ?? "invalid_input" };
   }
 
-  if (!isWaitlistConfigured()) {
+  if (!isNotionConfigured()) {
     return { ok: false, error: "not_configured" };
   }
 
+  // Race-safe-enough uniqueness check: this is the cached union (60s
+  // staleness window). For a low-traffic publisher project that's fine —
+  // the only failure mode is two strangers picking identical nicknames in
+  // the same minute, which gives the second person a duplicate row that
+  // can be cleaned up manually in Notion. Tightening this would require
+  // an indexed "Nickname Lower" property on the serials DB.
   try {
-    const result = await addToWaitlist(parsed.data.nickname);
-    if (!result.ok) {
-      return { ok: false, error: result.error };
+    if (await isNicknameTaken(parsed.data.nickname)) {
+      return { ok: false, error: "nickname_taken" };
     }
-    return { ok: true, data: { pageId: result.pageId } };
+
+    const claimed = await claimWishedSerial(parsed.data.nickname);
+    // Bust the nickname cache so the next visitor sees this name as taken.
+    bustNicknames();
+    // Refresh the home page so the new chip shows up on the 心愿墙
+    // right after the sheet closes — claimWishedSerial already busted
+    // WALL_TAG + COUNT_TAG, but the route itself still needs a re-render.
+    revalidatePath("/");
+    return {
+      ok: true,
+      data: {
+        pageId: claimed.pageId,
+        serial: claimed.serial,
+        serialDisplay: padSerial(claimed.serial),
+      },
+    };
   } catch (e) {
     console.error("[actions] joinWaitlist failed", e);
     return {

@@ -34,7 +34,7 @@ async function AdminBody() {
 
   const configured = isNotionConfigured();
   let next = 1;
-  let stats = { issued: 0, goal: 3000, onWall: 0 };
+  let stats = { issued: 0, wished: 0, goal: 3000, onWall: 0 };
   if (configured) {
     try {
       next = (await highestSerial()) + 1;
@@ -71,7 +71,7 @@ async function AdminBody() {
         <div className="text-eyebrow text-ink-mute">{t.admin.title}</div>
         <div className="mt-3 grid grid-cols-3 gap-3">
           <Stat label={t.admin.sold} value={stats.issued} />
-          <Stat label={t.admin.completed} value={stats.onWall} />
+          <Stat label={t.admin.wished} value={stats.wished} />
           <Stat label={t.progress.goal} value={stats.goal} dim />
         </div>
       </header>
