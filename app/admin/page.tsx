@@ -1,11 +1,11 @@
 import { Suspense } from "react";
 import { ArrowUpRight, LogOut } from "lucide-react";
 import { AdminLogin } from "@/components/admin/AdminLogin";
-import { SerialPanel } from "@/components/admin/SerialPanel";
+import { ManagePanel } from "@/components/admin/ManagePanel";
 import { ShipReadyToggle } from "@/components/admin/ShipReadyToggle";
 import { TopBar } from "@/components/hero/TopBar";
 import { readAdmin } from "@/lib/auth/session";
-import { highestSerial, counts } from "@/lib/notion/repo";
+import { counts } from "@/lib/notion/repo";
 import { readShipReady } from "@/lib/notion/settings";
 import { isNotionConfigured, parentPageUrl } from "@/lib/notion/client";
 import { adminSignOutAction } from "@/app/actions";
@@ -33,11 +33,9 @@ async function AdminBody() {
   }
 
   const configured = isNotionConfigured();
-  let next = 1;
   let stats = { issued: 0, wished: 0, goal: 3000, onWall: 0 };
   if (configured) {
     try {
-      next = (await highestSerial()) + 1;
       stats = await counts();
     } catch (e) {
       console.error("[admin] notion read failed", e);
@@ -78,7 +76,7 @@ async function AdminBody() {
 
       <ShipReadyToggle initialReady={shipReady} />
 
-      <SerialPanel initialNextSerial={next} />
+      <ManagePanel />
 
       <a
         href={parentPageUrl()}

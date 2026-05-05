@@ -42,17 +42,11 @@ function readCreatedTime(prop: unknown): string | null {
   return (prop as { created_time?: string }).created_time ?? null;
 }
 
-export type SerialStatus =
-  // Auto-created by a waitlist signup. Has nickname + auto-generated magic
-  // word, but no contact details and no physical book yet — it's a wish.
-  | "Wished"
-  // Admin-issued via /admin. Magic word printed on a card; nickname is
-  // empty until the buyer signs in and fills their profile.
-  | "Issued"
-  | "Profile Complete"
-  | "Exchange Requested"
-  | "Shipped"
-  | "Delivered";
+// SerialStatus + ALL_SERIAL_STATUSES live in `./status` so they can be
+// imported from client components without dragging this `server-only`
+// module into the browser bundle.
+export { ALL_SERIAL_STATUSES, type SerialStatus } from "./status";
+import type { SerialStatus } from "./status";
 
 export type SerialRow = {
   pageId: string;

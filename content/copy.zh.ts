@@ -146,43 +146,33 @@ export const zh = ({
     title: "出版人后台",
     passwordLabel: "管理员密码",
     signIn: "进入",
-    issueTitle: "派发下一本",
-    issueButton: "派发下一个编号",
-    issueHint: "点一下生成新编号 + 暗号，然后写到书内页。",
-    nextSerial: "下一个编号",
-    magicWord: "暗号",
-    copy: "复制",
-    copied: "已复制",
-    print: "打印这张卡",
-    recentlyIssued: "最近派发",
     openInNotion: "在 Notion 中管理",
-    notionHint: "其余日常工作（修改地址、标记发货、补正信息）都在 Notion 里完成。",
+    notionHint: "其余日常工作（修改地址、补正联系方式、写运单号）都在 Notion 里完成。",
     sold: "已派发",
     completed: "已完成资料",
     wished: "心愿",
     exchanges: "纸书申请",
     signOut: "退出",
-    batchTitle: "批量派发",
-    batchCountLabel: "数量",
-    batchIssue: "批量生成",
-    batchIssued: "已生成 {n} 个编号",
-    batchFailed: "批量派发失败",
-    copyAll: "复制全部",
-    manage: "管理",
-    manageTitle: "已派发编号",
-    manageDescription: "查看每个编号 + 暗号，以及它是否已被使用。",
+    manageTitle: "编号管理",
     manageRefresh: "刷新",
-    manageEmpty: "还没有派发任何编号。",
+    manageEmpty: "还没有任何编号。",
     manageFailed: "无法读取列表",
-    manageTotal: "共 {n} 个",
-    filterAll: "全部",
-    filterUsed: "已使用",
-    filterUnused: "未使用",
-    used: "已使用",
-    unused: "未使用",
-    searchPlaceholder: "搜编号、暗号或昵称",
+    managePrev: "上一页",
+    manageNext: "下一页",
+    managePageOf: "第 {page} / {total} 页",
+    manageShowing: "第 {from}–{to} 条 · 共 {total} 条",
+    statusColumn: "状态",
+    statusLabels: {
+      wished: "心愿",
+      issued: "已派发",
+      profileComplete: "资料完整",
+      exchangeRequested: "已申请纸书",
+      shipped: "已发货",
+      delivered: "已送达",
+    },
+    statusUpdated: "已更新为「{status}」",
+    statusUpdateFailed: "状态更新失败，请稍后再试",
     dangerZone: "危险操作",
-    resetTitle: "重置全部编号",
     resetHint: "把已派发的所有编号归档，下一次从 #0001 开始。原数据会保留在 Notion 的归档区，可以手动恢复。",
     resetButton: "重置全部编号",
     resetConfirmTitle: "确定重置吗？",
@@ -312,15 +302,6 @@ type CopyShape = {
     title: string;
     passwordLabel: string;
     signIn: string;
-    issueTitle: string;
-    issueButton: string;
-    issueHint: string;
-    nextSerial: string;
-    magicWord: string;
-    copy: string;
-    copied: string;
-    print: string;
-    recentlyIssued: string;
     openInNotion: string;
     notionHint: string;
     sold: string;
@@ -328,27 +309,26 @@ type CopyShape = {
     wished: string;
     exchanges: string;
     signOut: string;
-    batchTitle: string;
-    batchCountLabel: string;
-    batchIssue: string;
-    batchIssued: string;
-    batchFailed: string;
-    copyAll: string;
-    manage: string;
     manageTitle: string;
-    manageDescription: string;
     manageRefresh: string;
     manageEmpty: string;
     manageFailed: string;
-    manageTotal: string;
-    filterAll: string;
-    filterUsed: string;
-    filterUnused: string;
-    used: string;
-    unused: string;
-    searchPlaceholder: string;
+    managePrev: string;
+    manageNext: string;
+    managePageOf: string;
+    manageShowing: string;
+    statusColumn: string;
+    statusLabels: {
+      wished: string;
+      issued: string;
+      profileComplete: string;
+      exchangeRequested: string;
+      shipped: string;
+      delivered: string;
+    };
+    statusUpdated: string;
+    statusUpdateFailed: string;
     dangerZone: string;
-    resetTitle: string;
     resetHint: string;
     resetButton: string;
     resetConfirmTitle: string;

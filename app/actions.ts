@@ -8,14 +8,13 @@ import {
   confirmDelivery,
   findByCredentials,
   getByPageId,
-  issueBatchSerials as repoIssueBatchSerials,
-  issueNextSerial as repoIssueNextSerial,
   listAllSerials as repoListAllSerials,
-  regenerateMagicWord,
   requestExchange,
   resetAllSerials as repoResetAllSerials,
   saveProfile,
+  setSerialStatus as repoSetSerialStatus,
 } from "@/lib/notion/repo";
+import { ALL_SERIAL_STATUSES, type SerialStatus } from "@/lib/notion/status";
 import { padSerial, parseSerial } from "@/lib/format";
 import {
   checkAdminPassword,
@@ -213,84 +212,51 @@ export async function adminSignOutAction(): Promise<void> {
   revalidatePath("/admin");
 }
 
-export async function issueNextSerialAction(): Promise<
-  ActionResult<{ serial: number; serialDisplay: string; magicWord: string }>
-> {
-  if (!(await readAdmin())) return { ok: false, error: "unauthorized" };
-  try {
-    const { serial, magicWord } = await repoIssueNextSerial();
-    revalidatePath("/admin");
-    revalidatePath("/");
-    return {
-      ok: true,
-      data: { serial, serialDisplay: padSerial(serial), magicWord },
-    };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "issue_failed" };
-  }
-}
-
-export async function regenerateMagicWordAction(
-  pageId: string
-): Promise<ActionResult<{ magicWord: string }>> {
-  if (!(await readAdmin())) return { ok: false, error: "unauthorized" };
-  const word = await regenerateMagicWord(pageId);
-  revalidatePath("/admin");
-  return { ok: true, data: { magicWord: word } };
-}
-
-const batchIssueSchema = z.object({
-  count: z.number().int().min(1).max(50),
-});
-
-export type IssuedItem = {
-  serial: number;
-  serialDisplay: string;
-  magicWord: string;
-};
-
-export async function issueBatchSerialsAction(
-  input: z.infer<typeof batchIssueSchema>
-): Promise<ActionResult<{ items: IssuedItem[] }>> {
-  if (!(await readAdmin())) return { ok: false, error: "unauthorized" };
-  const parsed = batchIssueSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "invalid_input" };
-
-  try {
-    const issued = await repoIssueBatchSerials(parsed.data.count);
-    revalidatePath("/admin");
-    revalidatePath("/");
-    return {
-      ok: true,
-      data: {
-        items: issued.map((it) => ({
-          serial: it.serial,
-          serialDisplay: padSerial(it.serial),
-          magicWord: it.magicWord,
-        })),
-      },
-    };
-  } catch (e) {
-    console.error("[actions] issueBatchSerials failed", e);
-    return {
-      ok: false,
-      error: e instanceof Error ? e.message : "batch_failed",
-    };
-  }
-}
-
 export type AdminSerialRow = {
   pageId: string;
   serial: number;
   serialDisplay: string;
   magicWord: string;
-  status: string;
-  used: boolean;
+  status: SerialStatus;
   nickname: string;
   contact: string;
   wantsPrintedBook: boolean;
   issuedAt: string;
 };
+
+const setStatusSchema = z.object({
+  pageId: z.string().min(1),
+  status: z.enum(ALL_SERIAL_STATUSES),
+});
+
+/**
+ * Admin-only: move a serial row to a new lifecycle status. The new
+ * status is rendered immediately in the manage panel via optimistic
+ * update — this action is what makes the change durable.
+ */
+export async function setSerialStatusAction(
+  input: z.infer<typeof setStatusSchema>
+): Promise<ActionResult<{ pageId: string; status: SerialStatus }>> {
+  if (!(await readAdmin())) return { ok: false, error: "unauthorized" };
+  const parsed = setStatusSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid_input" };
+
+  try {
+    await repoSetSerialStatus(parsed.data.pageId, parsed.data.status);
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return {
+      ok: true,
+      data: { pageId: parsed.data.pageId, status: parsed.data.status },
+    };
+  } catch (e) {
+    console.error("[actions] setSerialStatus failed", e);
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "status_update_failed",
+    };
+  }
+}
 
 const resetSchema = z.object({
   // Client must echo back the literal string "RESET" to confirm. This
@@ -320,10 +286,9 @@ export async function resetSerialsAction(
 }
 
 /**
- * List every issued serial, with a derived `used` flag. Used by the
- * admin management drawer. A row counts as "used" once it has moved past
- * the freshly-issued state — i.e. the buyer has signed in and saved a
- * profile (status moves off "Issued" or a nickname has been set).
+ * List every serial row, sorted by serial descending. Powers the admin
+ * management list. Not cached — admins want fresh data on every load,
+ * and the volume is small (a few thousand rows max).
  */
 export async function listAllSerialsAction(): Promise<
   ActionResult<{ rows: AdminSerialRow[] }>
@@ -340,7 +305,6 @@ export async function listAllSerialsAction(): Promise<
           serialDisplay: padSerial(r.serial),
           magicWord: r.magicWord,
           status: r.status,
-          used: r.status !== "Issued" || r.nickname.trim().length > 0,
           nickname: r.nickname,
           contact: r.contact,
           wantsPrintedBook: r.wantsPrintedBook,

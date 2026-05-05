@@ -15,6 +15,7 @@ import {
 } from "./properties";
 import { padSerial, TOTAL_GOAL } from "@/lib/format";
 import { generateMagicWord, normalizeMagicWord } from "@/lib/words";
+import { ALL_SERIAL_STATUSES } from "./status";
 
 import { COUNT_TAG, NICKNAMES_TAG, PAGE_TAG, WALL_TAG } from "./tags";
 
@@ -139,16 +140,6 @@ export async function findByCredentials(
   return rowFromPage(res.results[0] as unknown as NotionPage);
 }
 
-/** Lightweight list, not cached — used inside admin only. */
-export async function recentlyIssued(limit = 10): Promise<SerialRow[]> {
-  const res = await notion().dataSources.query({
-    data_source_id: dataSourceId(),
-    sorts: [{ property: "Issued At", direction: "descending" }],
-    page_size: limit,
-  });
-  return res.results.map((r) => rowFromPage(r as unknown as NotionPage));
-}
-
 /**
  * List every issued row, sorted by serial descending. Used by the admin
  * management drawer. Not cached because admins want fresh data.
@@ -192,89 +183,45 @@ export type IssuedSerial = {
 };
 
 /**
- * Internal helper: create a serials row at the given number.
- *
- * `wish` mode pre-fills the nickname, sets Status to "Wished", and flips
- * `Show on Wall` on so the user appears on the wall the moment they
- * download the QR. `issued` mode keeps the legacy admin-issued shape
- * (no nickname, hidden from wall, Status = "Issued").
- */
-async function createSerialRow(
-  next: number,
-  variant:
-    | { kind: "issued" }
-    | { kind: "wished"; nickname: string }
-): Promise<IssuedSerial> {
-  const magicWord = generateMagicWord();
-  const parent = {
-    type: "data_source_id" as const,
-    data_source_id: dataSourceId(),
-  };
-
-  // Two distinct create() calls (rather than a unified `properties` object)
-  // because Notion's typed index signature widens any `?: undefined` keys
-  // into "missing required property" errors when we union the two shapes.
-  const created =
-    variant.kind === "wished"
-      ? await notion().pages.create({
-          parent,
-          properties: {
-            Serial: titleText(padSerial(next)),
-            Number: number(next),
-            "Magic Word": richText(magicWord),
-            "Wants Printed Book": checkbox(false),
-            Status: selectOption("Wished"),
-            Nickname: richText(variant.nickname),
-            "Show on Wall": checkbox(true),
-          },
-        })
-      : await notion().pages.create({
-          parent,
-          properties: {
-            Serial: titleText(padSerial(next)),
-            Number: number(next),
-            "Magic Word": richText(magicWord),
-            "Wants Printed Book": checkbox(false),
-            Status: selectOption("Issued"),
-            "Show on Wall": checkbox(false),
-          },
-        });
-
-  return { serial: next, magicWord, pageId: created.id };
-}
-
-export async function issueNextSerial(): Promise<IssuedSerial> {
-  const top = await highestSerial();
-  const next = top + 1;
-  // Note: TOTAL_GOAL (3000) is a printing target, not a hard cap. Wishes
-  // are uncapped, and admin-issued serials follow the same sequence — so
-  // we don't throw when `next` exceeds the goal. The progress meter just
-  // tops out visually.
-  const issued = await createSerialRow(next, { kind: "issued" });
-  bustCounts();
-  return issued;
-}
-
-/**
  * Reserve the next serial for a waitlist signup. Status starts as
  * `Wished`; the user's nickname is pinned to the row immediately so it
- * appears on the wall. The publisher pulls the magic word from admin
- * later when handing the user their physical book.
+ * appears on the wall. A magic word is generated up-front so the
+ * publisher can hand the buyer a credential pair the moment they hand
+ * over a physical book — at which point the admin advances the row's
+ * status from `Wished` → `Issued` (or directly to `Shipped`).
+ *
+ * Note: TOTAL_GOAL (3000) is a printing target, not a hard cap, so we
+ * never refuse a claim. The progress meter just tops out visually.
  */
 export async function claimWishedSerial(
   nickname: string
 ): Promise<IssuedSerial> {
   const trimmed = nickname.trim();
   if (!trimmed) throw new Error("nickname_required");
+
   const top = await highestSerial();
   const next = top + 1;
-  const issued = await createSerialRow(next, {
-    kind: "wished",
-    nickname: trimmed,
+  const magicWord = generateMagicWord();
+
+  const created = await notion().pages.create({
+    parent: {
+      type: "data_source_id" as const,
+      data_source_id: dataSourceId(),
+    },
+    properties: {
+      Serial: titleText(padSerial(next)),
+      Number: number(next),
+      "Magic Word": richText(magicWord),
+      "Wants Printed Book": checkbox(false),
+      Status: selectOption("Wished"),
+      Nickname: richText(trimmed),
+      "Show on Wall": checkbox(true),
+    },
   });
+
   bustWall();
   bustCounts();
-  return issued;
+  return { serial: next, magicWord, pageId: created.id };
 }
 
 /**
@@ -295,33 +242,28 @@ export async function resetAllSerials(): Promise<number> {
 }
 
 /**
- * Issue `count` serials in one batch. Reads the current top once, then
- * creates rows sequentially (Notion has no bulk-create endpoint). The
- * 3000 target is aspirational, not a hard cap, so we don't refuse a
- * batch that pushes beyond it.
+ * Move a row to a new lifecycle status. Used by the admin management
+ * panel to advance rows along the pipeline (e.g. `Wished` → `Issued`,
+ * `Profile Complete` → `Shipped`). Always busts the wall + counts so
+ * the homepage progress meter stays in sync — moving a row off
+ * `Wished` flips it from the `wished` bucket into `issued` in
+ * `counts()`.
  */
-export async function issueBatchSerials(
-  count: number
-): Promise<IssuedSerial[]> {
-  if (!Number.isInteger(count) || count < 1) {
-    throw new Error("Batch count must be a positive integer.");
+export async function setSerialStatus(
+  pageId: string,
+  status: SerialStatus
+): Promise<void> {
+  if (!ALL_SERIAL_STATUSES.includes(status)) {
+    throw new Error(`invalid_status:${status}`);
   }
-  const top = await highestSerial();
-  const issued: IssuedSerial[] = [];
-  for (let i = 1; i <= count; i++) {
-    issued.push(await createSerialRow(top + i, { kind: "issued" }));
-  }
-  bustCounts();
-  return issued;
-}
-
-export async function regenerateMagicWord(pageId: string): Promise<string> {
-  const next = generateMagicWord();
   await notion().pages.update({
     page_id: pageId,
-    properties: { "Magic Word": richText(next) },
+    properties: {
+      Status: selectOption(status),
+    },
   });
-  return next;
+  bustWall();
+  bustCounts();
 }
 
 export async function saveProfile(
