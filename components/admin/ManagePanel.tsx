@@ -118,10 +118,6 @@ export function ManagePanel() {
     load();
   }, []);
 
-  useEffect(() => {
-    setPage(0);
-  }, [searchQuery]);
-
   const filteredRows = useMemo(() => {
     if (!rows) return [];
     const q = searchQuery.trim().toLowerCase();
@@ -214,7 +210,10 @@ export function ManagePanel() {
           <Input
             type="search"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setPage(0);
+            }}
             placeholder={t.admin.manageSearchPlaceholder}
             className="h-11 rounded-xl border-hairline bg-paper text-[15px]"
             autoComplete="off"
