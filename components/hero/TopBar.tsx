@@ -19,7 +19,6 @@ export function TopBar({
         <span className="text-han-display text-xl text-ink">
           {t.brand.name}
         </span>
-        <span className="text-eyebrow text-ink-mute">{t.brand.sub}</span>
       </div>
 
       <div className="flex items-center gap-1">

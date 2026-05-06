@@ -5,15 +5,12 @@ import { BookChip } from "./BookChip";
 
 /**
  * Server component. Reads from the (cached) serials DB and renders one
- * chip per buyer/wisher. The waitlist used to live in a separate Notion
- * DB; it has since been folded into the serials DB so a wishlist signup
- * IS a serial reservation. That removes the duplication where the same
- * person could appear once as a wish and once as a buyer.
+ * chip per row that has a nickname and is not legacy `Wished`.
  *
  * BookChip handles the per-status visual:
- * - Wished     → outlined ghost card with serial in muted ink
+ * - Wished (legacy only) → outlined ghost card with serial in muted ink
  * - in-pipeline → solid colourful card with serial
- * - Delivered   → solid card + green ✓ badge ("wish fulfilled")
+ * - Delivered   → solid card + green ✓ badge
  */
 export async function BuyerWall() {
   const t = await getCopy();
@@ -58,6 +55,7 @@ export async function BuyerWall() {
                 serial={r.serial}
                 nickname={r.nickname}
                 status={r.status}
+                maskName={!r.showOnWall}
               />
             ))}
           </div>
@@ -74,6 +72,7 @@ export async function BuyerWall() {
                 serial={r.serial}
                 nickname={r.nickname}
                 status={r.status}
+                maskName={!r.showOnWall}
               />
             ))}
           </div>

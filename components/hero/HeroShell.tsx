@@ -22,13 +22,11 @@ export function HeroShell({
   sold,
   goal,
   isSignedIn,
-  isShipReady,
   wall,
 }: {
   sold: number;
   goal: number;
   isSignedIn: boolean;
-  isShipReady: boolean;
   wall: React.ReactNode;
 }) {
   const t = useT();
@@ -37,23 +35,10 @@ export function HeroShell({
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  // When the site isn't shipping yet, anonymous visitors land on the
-  // waitlist drawer. Signed-in buyers (rare in pre-launch mode) keep
-  // their My Book flow.
-  function openPrimary() {
-    if (!isShipReady && !isSignedIn) {
-      setWaitlistOpen(true);
-      return;
-    }
+  function openBookShortcut() {
     if (isSignedIn) setMyBookOpen(true);
     else setSignInOpen(true);
   }
-
-  const primaryLabel = isSignedIn
-    ? t.myBook.title
-    : isShipReady
-      ? t.hero.primaryCta
-      : t.hero.waitlistCta;
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
@@ -61,9 +46,11 @@ export function HeroShell({
         trailing={
           <button
             type="button"
-            onClick={openPrimary}
+            onClick={openBookShortcut}
             className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline text-ink-soft transition-colors hover:border-ink hover:text-ink"
-            aria-label={t.signIn.title}
+            aria-label={
+              isSignedIn ? t.myBook.title : t.hero.primaryCta
+            }
           >
             <BookOpen className="h-3.5 w-3.5" />
           </button>
@@ -77,9 +64,17 @@ export function HeroShell({
             {t.hero.title}
           </span>
         </h1>
-        <p className="mt-3 max-w-[34ch] text-[14.5px] leading-relaxed text-ink-soft">
+        <p className="mt-3 max-w-[36ch] whitespace-pre-line text-[14.5px] leading-relaxed text-ink-soft">
           {t.hero.subtitle}
         </p>
+        <button
+          type="button"
+          onClick={() => setAboutOpen(true)}
+          className="mt-4 inline-flex items-center gap-1 text-[13.5px] font-medium tracking-wide text-ink-soft underline-offset-4 transition-colors hover:text-ink hover:underline"
+        >
+          {t.hero.secondaryCta}
+          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
+        </button>
       </section>
 
       <div className="relative mt-2 px-2">
@@ -90,24 +85,37 @@ export function HeroShell({
         <ProgressMeter sold={sold} goal={goal} />
       </section>
 
-      <section className="mt-5 flex items-center gap-2.5 px-5">
-        <Button
-          type="button"
-          onClick={openPrimary}
-          className="h-12 flex-1 rounded-full bg-ink text-paper text-[15px] tracking-wider hover:bg-ink/90"
-        >
-          <Sparkles className="h-4 w-4" />
-          {primaryLabel}
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setAboutOpen(true)}
-          className="h-12 rounded-full border-hairline px-4 text-[14px] text-ink"
-        >
-          {t.hero.secondaryCta}
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Button>
+      <section className="mt-5 px-5">
+        {isSignedIn ? (
+          <Button
+            type="button"
+            onClick={() => setMyBookOpen(true)}
+            className="h-12 w-full rounded-full bg-ink text-paper text-[15px] tracking-wider hover:bg-ink/90"
+          >
+            <Sparkles className="h-4 w-4" />
+            {t.myBook.title}
+          </Button>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5">
+            <Button
+              type="button"
+              onClick={() => setSignInOpen(true)}
+              className="h-12 rounded-full bg-ink text-paper text-[14px] tracking-wider hover:bg-ink/90"
+            >
+              <BookOpen className="h-4 w-4" />
+              {t.hero.primaryCta}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setWaitlistOpen(true)}
+              className="h-12 rounded-full border-hairline text-[14px] text-ink"
+            >
+              <Sparkles className="h-4 w-4" />
+              {t.hero.waitlistCta}
+            </Button>
+          </div>
+        )}
       </section>
 
       <section className="mt-6 px-5 pb-8">

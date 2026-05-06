@@ -18,7 +18,6 @@ import {
   cancelExchangeAction,
   confirmDeliveryAction,
   getMyBook,
-  requestExchangeAction,
   saveProfileAction,
   signOutAction,
 } from "@/app/actions";
@@ -38,7 +37,6 @@ export function MyBookSheet({
   const [loadPending, startLoad] = useTransition();
   const [pending, startTransition] = useTransition();
 
-  // form state
   const [nickname, setNickname] = useState("");
   const [contact, setContact] = useState("");
   const [showOnWall, setShowOnWall] = useState(true);
@@ -67,44 +65,39 @@ export function MyBookSheet({
 
   const loading = loadPending && !row;
 
+  const pipelineLocked =
+    row?.status === "Shipped" || row?.status === "Delivered";
+
+  const showAddressField = wantsPrintedBook;
+
+  const saveDisabled =
+    !nickname.trim() ||
+    !contact.trim() ||
+    pending ||
+    (showAddressField &&
+      !pipelineLocked &&
+      address.trim().length < 2);
+
   function save() {
     startTransition(async () => {
       const res = await saveProfileAction({
         nickname,
         contact,
-        wantsPrintedBook,
+        wantsPrintedBook: pipelineLocked ? row!.wantsPrintedBook : wantsPrintedBook,
         showOnWall,
+        address: wantsPrintedBook ? address : "",
       });
       if (!res.ok) {
-        toast.error(res.error);
+        if (res.error === "address_required") {
+          toast.error(`${t.myBook.addressLabel}：${t.myBook.addressTooShort}`);
+        } else {
+          toast.error(res.error);
+        }
         return;
       }
       toast.success(t.myBook.saved);
       const refreshed = await getMyBook();
       if (refreshed) setRow(refreshed);
-    });
-  }
-
-  function submitExchange() {
-    const trimmed = address.trim();
-    if (trimmed.length < 2) {
-      toast.error(`${t.myBook.addressLabel}：${t.myBook.addressTooShort}`);
-      return;
-    }
-    startTransition(async () => {
-      try {
-        const res = await requestExchangeAction({ address: trimmed });
-        if (!res.ok) {
-          toast.error(t.myBook.exchangeFailed);
-          return;
-        }
-        toast.success(t.myBook.exchangeRequested);
-        const refreshed = await getMyBook();
-        if (refreshed) setRow(refreshed);
-      } catch (err) {
-        console.error("[myBook] requestExchange failed", err);
-        toast.error(t.myBook.exchangeFailed);
-      }
     });
   }
 
@@ -131,9 +124,15 @@ export function MyBookSheet({
       try {
         const res = await cancelExchangeAction();
         if (!res.ok) {
-          toast.error(t.myBook.exchangeFailed);
+          toast.error(
+            res.error === "exchange_locked"
+              ? t.myBook.exchangeCancelLocked
+              : t.myBook.exchangeFailed
+          );
           return;
         }
+        setWantsPrintedBook(false);
+        setAddress("");
         const refreshed = await getMyBook();
         if (refreshed) setRow(refreshed);
       } catch (err) {
@@ -156,7 +155,6 @@ export function MyBookSheet({
     <Sheet
       open={open}
       onOpenChange={(v) => {
-        // don't allow dismissal with empty profile
         if (!v && profileIncomplete && !nickname.trim()) {
           toast.message(t.myBook.profileTitle);
           return;
@@ -171,7 +169,7 @@ export function MyBookSheet({
         <SheetHeader className="px-0 text-left">
           <div className="text-eyebrow flex items-center gap-2">
             <Sparkles className="h-3 w-3" />
-            <span>{t.myBook.yours}</span>
+            <span>{t.myBook.title}</span>
           </div>
           <SheetTitle className="text-display flex items-baseline gap-3 text-3xl text-ink">
             {row ? (
@@ -196,18 +194,29 @@ export function MyBookSheet({
           </div>
         ) : (
           <div className="mt-5 flex flex-col gap-5">
-            {/* timeline */}
             <div className="rounded-lg border border-hairline bg-ivory/40 p-4">
               <div className="text-eyebrow mb-3 text-ink-mute">
                 {t.myBook.statusLabel}
               </div>
               <StatusTimeline
                 status={row.status}
-                wantsExchange={row.wantsPrintedBook || row.status !== "Issued" && row.status !== "Profile Complete"}
+                wantsExchange={
+                  row.wantsPrintedBook ||
+                  (row.status !== "Issued" && row.status !== "Profile Complete")
+                }
               />
+              {row.status === "Exchange Requested" && (
+                <p className="mt-3 text-xs leading-relaxed text-ink-mute">
+                  {t.myBook.exchangeAwaitingShipHint}
+                </p>
+              )}
+              {row.status === "Shipped" && (
+                <p className="mt-3 text-xs leading-relaxed text-ink-mute">
+                  {t.myBook.shippedAwaitReceiptHint}
+                </p>
+              )}
             </div>
 
-            {/* profile form */}
             <div className="flex flex-col gap-3">
               <p className="text-xs text-ink-mute">{t.myBook.profileNote}</p>
 
@@ -244,24 +253,44 @@ export function MyBookSheet({
                   onChange={(e) => setShowOnWall(e.target.checked)}
                   className="mt-1 h-4 w-4 cursor-pointer accent-ink"
                 />
-                <span>{t.wall.title}</span>
+                <span>{t.myBook.showOnWallLabel}</span>
               </label>
 
               <label className="flex items-start gap-3 text-sm text-ink-soft">
                 <input
                   type="checkbox"
                   checked={wantsPrintedBook}
-                  onChange={(e) => setWantsPrintedBook(e.target.checked)}
-                  className="mt-1 h-4 w-4 cursor-pointer accent-ink"
+                  disabled={pipelineLocked}
+                  onChange={(e) => {
+                    const v = e.target.checked;
+                    setWantsPrintedBook(v);
+                    if (!v) setAddress("");
+                  }}
+                  className="mt-1 h-4 w-4 cursor-pointer accent-ink disabled:opacity-50"
                 />
                 <span>{t.myBook.wantPrintedLabel}</span>
               </label>
 
+              {showAddressField && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="address" className="text-eyebrow text-ink-mute">
+                    {t.myBook.addressLabel}
+                  </Label>
+                  <textarea
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    rows={3}
+                    className="min-h-[88px] w-full resize-y rounded-md border border-hairline bg-ivory/40 px-3 py-2 text-sm text-ink placeholder:text-ink-mute/40 focus-visible:border-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/10"
+                  />
+                </div>
+              )}
+
               <Button
                 type="button"
                 onClick={save}
-                disabled={pending || !nickname.trim() || !contact.trim()}
-                className="mt-1 h-11 rounded-full bg-ink text-paper hover:bg-ink/90"
+                disabled={saveDisabled}
+                className="mt-1 h-11 rounded-full bg-ink text-paper hover:bg-ink/90 disabled:opacity-50"
               >
                 {pending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -271,74 +300,39 @@ export function MyBookSheet({
               </Button>
             </div>
 
-            {/* exchange flow (visible after profile saved) */}
-            {row.nickname && (
-              <div className="mt-2 rounded-lg border border-hairline bg-paper p-4">
-                {row.status === "Exchange Requested" ||
-                row.status === "Shipped" ||
-                row.status === "Delivered" ? (
-                  <div className="flex flex-col gap-2">
-                    <div className="text-eyebrow text-ink-mute">
-                      {t.myBook.addressLabel}
-                    </div>
-                    <p className="text-sm text-ink">{row.address || "—"}</p>
-                    {row.status === "Exchange Requested" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={cancelExchange}
-                        disabled={pending}
-                        className="mt-2 h-9 self-start border-hairline text-ink-soft"
-                      >
-                        {t.myBook.cancelExchange}
-                      </Button>
-                    )}
-                    {row.status === "Shipped" && (
-                      <div className="mt-2 flex flex-col gap-2">
-                        <p className="text-xs text-ink-mute">
-                          {t.myBook.confirmReceiptHint}
-                        </p>
-                        <Button
-                          type="button"
-                          onClick={confirmReceipt}
-                          disabled={pending}
-                          className="h-10 self-start rounded-full bg-ink px-5 text-paper hover:bg-ink/90"
-                        >
-                          {pending ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            t.myBook.confirmReceipt
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    <Label
-                      htmlFor="address"
-                      className="text-eyebrow text-ink-mute"
-                    >
-                      {t.myBook.addressLabel}
-                    </Label>
-                    <Input
-                      id="address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="武汉市..."
-                      className="h-11 rounded-md border-hairline bg-ivory/40"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={submitExchange}
-                      disabled={pending || !address.trim()}
-                      className="mt-1 h-10 rounded-full border-ink text-ink hover:bg-ink hover:text-paper"
-                    >
-                      {t.myBook.requestExchange}
-                    </Button>
-                  </div>
-                )}
+            {row.nickname &&
+              row.status === "Exchange Requested" &&
+              !pipelineLocked && (
+                <div className="rounded-lg border border-hairline bg-paper p-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={cancelExchange}
+                    disabled={pending}
+                    className="h-9 border-hairline text-ink-soft"
+                  >
+                    {t.myBook.cancelExchange}
+                  </Button>
+                </div>
+              )}
+
+            {row.nickname && row.status === "Shipped" && (
+              <div className="rounded-lg border border-hairline bg-paper p-4">
+                <p className="mb-2 text-xs text-ink-mute">
+                  {t.myBook.confirmReceiptHint}
+                </p>
+                <Button
+                  type="button"
+                  onClick={confirmReceipt}
+                  disabled={pending}
+                  className="h-10 rounded-full bg-ink px-5 text-paper hover:bg-ink/90"
+                >
+                  {pending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    t.myBook.confirmReceipt
+                  )}
+                </Button>
               </div>
             )}
 

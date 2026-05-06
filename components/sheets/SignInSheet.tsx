@@ -55,7 +55,7 @@ export function SignInSheet({
         <SheetHeader className="px-0 text-left">
           <div className="text-eyebrow flex items-center gap-2">
             <BookOpen className="h-3 w-3" />
-            <span>{t.tabs.wall === t.tabs.wall ? "Doushu" : "Doushu"}</span>
+            <span>{t.brand.name}</span>
           </div>
           <SheetTitle className="text-display text-2xl text-ink">
             {t.signIn.title}

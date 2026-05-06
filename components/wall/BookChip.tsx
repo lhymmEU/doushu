@@ -25,6 +25,8 @@ function coverFor(serial: number) {
 type Variant = "wished" | "active" | "fulfilled";
 
 function variantFor(status: SerialStatus): Variant {
+  // Legacy: `Wished` rows are no longer created by the app; kept for any
+  // historical Notion rows or archived DB restores.
   if (status === "Wished") return "wished";
   if (status === "Delivered") return "fulfilled";
   return "active";
@@ -34,11 +36,14 @@ export function BookChip({
   serial,
   nickname,
   status,
+  maskName,
   className,
 }: {
   serial: number;
   nickname: string;
   status: SerialStatus;
+  /** When true, show **** instead of the nickname (privacy). */
+  maskName?: boolean;
   className?: string;
 }) {
   const v = variantFor(status);
@@ -108,7 +113,7 @@ export function BookChip({
       )}
 
       <span className="line-clamp-1 max-w-[64px] text-center text-[10px] tracking-tight text-ink-soft">
-        {nickname}
+        {maskName ? "****" : nickname}
       </span>
     </div>
   );

@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import { HeroShell } from "@/components/hero/HeroShell";
 import { BuyerWall } from "@/components/wall/BuyerWall";
 import { counts } from "@/lib/notion/repo";
-import { isNotionConfigured, isSettingsConfigured } from "@/lib/notion/client";
-import { readShipReady } from "@/lib/notion/settings";
+import { isNotionConfigured } from "@/lib/notion/client";
 import { readBuyer } from "@/lib/auth/session";
 import { TOTAL_GOAL } from "@/lib/format";
 
@@ -31,21 +30,11 @@ async function HeroData() {
     }
   }
 
-  let isShipReady = false;
-  if (isSettingsConfigured()) {
-    try {
-      isShipReady = await readShipReady();
-    } catch (e) {
-      console.error("[home] readShipReady failed", e);
-    }
-  }
-
   return (
     <HeroShell
       sold={sold}
       goal={goal}
       isSignedIn={isSignedIn}
-      isShipReady={isShipReady}
       wall={
         <Suspense fallback={<WallFallback />}>
           <BuyerWall />

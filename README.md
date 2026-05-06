@@ -49,7 +49,7 @@ All variables live in `.env.local` (gitignored). See `.env.example` for the temp
 | `NOTION_DATA_SOURCE_ID`   |    ✅    | The data-source UUID for the same database (Notion 2025-09-03 API). The admin panel and all queries use this.                                                    |
 | `NOTION_PARENT_PAGE_ID`   |    ✅    | The 32-char ID of the parent page that holds the database. Lets the admin "Open in Notion" link work.                                                            |
 | `NOTION_PARENT_PAGE_URL`  |    ✅    | Full URL of the parent Notion page (`https://www.notion.so/<id>` or your custom slug). Linked from `/admin`.                                                     |
-| `NOTION_SETTINGS_DATA_SOURCE_ID` | ⚠️ | Data-source UUID for the single-row `Doushu Settings` database. Drives the admin "ready to ship" toggle. If missing, the site stays in "not ready to ship" mode. |
+| ~~`NOTION_SETTINGS_DATA_SOURCE_ID`~~ | — | **Deprecated.** No longer read; remove from `.env.local` if present. |
 | ~~`NOTION_WAITLIST_DATA_SOURCE_ID`~~ | — | **Deprecated.** Wishlist signups now write into `Doushu Serials` as `Wished` rows, so a separate waitlist database is no longer needed. The variable is no longer read; you can remove it from `.env.local`. |
 | `ADMIN_PASSWORD`          |    ✅    | Password gating `/admin`. Pick something long. Hashed in transit, compared with `timingSafeEqual`.                                                               |
 | `SESSION_SECRET`          |    ✅    | 32+ random bytes used to HMAC-sign buyer + admin cookies (JOSE HS256). Generate with `openssl rand -base64 32`.                                                  |
@@ -113,36 +113,11 @@ curl https://api.notion.com/v1/databases/$NOTION_DATABASE_ID \
 
 Or, easier: in the Notion **MCP** plugin, the database response includes `data_sources[].id`. Paste that UUID in.
 
-### 6. Settings database (pre-launch flow)
+### 6. Historical note: settings & waitlist databases
 
-One extra single-purpose database powers the admin **Ready to Ship** toggle. Create it inline under the same `Doushu · 豆书` parent page so the `Doushu` integration already has access.
-
-#### `Doushu Settings` (single-row config)
-
-| Property         | Type     | Notes                                                                                  |
-| ---------------- | -------- | -------------------------------------------------------------------------------------- |
-| `Key`            | Title    | Always `site` for the one and only row                                                  |
-| `Ready To Ship`  | Checkbox | `true` flips the home CTA back to `我有一本`; `false` (default) shows `我想要`         |
-
-Seed the database with exactly one row: `Key = site`, `Ready To Ship = unchecked`. The admin toggle at `/admin` updates this row in place; everything else (the home CTA, the waitlist drawer, the My Book sheet) reads from it via `'use cache'` + `revalidateTag('doushu-settings')`.
+The **`Doushu Settings`** database and **`NOTION_SETTINGS_DATA_SOURCE_ID`** env var are **deprecated** — they powered an old admin “ready to ship” toggle. The homepage now always offers both 「我想要」 (waitlist QR) and 「我有一本」 (sign-in).
 
 > **Where did `Doushu Waitlist` go?** It used to be a separate database for the `我想要` drawer, but waitlist signups now write into `Doushu Serials` directly as `Wished` rows. Nickname uniqueness, the wall, and the lifecycle all flow through the single serials DB. If you have an old `Doushu Waitlist` database lying around, you can archive it — the code no longer reads from it.
-
-#### Capture the data-source ID
-
-Grab the settings data-source UUID the same way as `NOTION_DATA_SOURCE_ID`:
-
-```bash
-curl https://api.notion.com/v1/databases/<SETTINGS_DB_ID> \
-  -H "Authorization: Bearer $NOTION_TOKEN" \
-  -H "Notion-Version: 2025-09-03" | jq '.data_sources[0].id'
-```
-
-Then set:
-
-- `NOTION_SETTINGS_DATA_SOURCE_ID=<settings data-source uuid>`
-
-Optional — if missing, the home page silently stays in "not ready to ship" mode.
 
 ### 7. Generate `SESSION_SECRET` and pick `ADMIN_PASSWORD`
 
@@ -192,9 +167,9 @@ Larger fixes (typos in addresses, manual tracking numbers, archiving spam rows) 
 - **`components/hero/`** — `HeroShell` (client), `BookStack` (animated SVG), `ProgressMeter`, `SegmentedTabs`, `TopBar`.
 - **`components/sheets/`** — `SignInSheet`, `MyBookSheet`, `WaitlistSheet`, `InfoPanels`, `StatusTimeline`. Bottom sheets keep the experience single-screen on mobile.
 - **`components/wall/`** — server-rendered `BuyerWall` + `BookChip` (wished / active / fulfilled variants).
-- **`components/admin/`** — `AdminLogin`, `ShipReadyToggle`, `ManagePanel` (paginated 5-per-page status manager + reset danger zone).
+- **`components/admin/`** — `AdminLogin`, `ManagePanel` (paginated 5-per-page status manager + reset danger zone).
 - **`components/system/`** — `LangShell` + `LangSync` so the cookie-based language read can sit inside a `<Suspense>` boundary required by `cacheComponents`.
-- **`lib/notion/`** — `client.ts` (singleton), `properties.ts` (page ↔ row adapter), `repo.ts` (cached reads via `'use cache'` + writes that `revalidateTag('max', ...)`), `waitlist.ts` (nickname uniqueness only — wishes themselves live in serials), `tags.ts` (shared cache-tag constants), `settings.ts` (ship-ready toggle).
+- **`lib/notion/`** — `client.ts` (singleton), `properties.ts` (page ↔ row adapter), `repo.ts` (cached reads via `'use cache'` + writes that `revalidateTag('max', ...)`), `tags.ts` (shared cache-tag constants), `status.ts`.
 - **`lib/auth/session.ts`** — JOSE-signed buyer + admin cookies.
 - **`lib/i18n.tsx`** + **`lib/server-i18n.ts`** + **`content/copy.{zh,en}.ts`** — i18n.
 - **`lib/words.ts`** — magic word generator (`adj-noun`, ~100×100 combinations, normalized for comparison).

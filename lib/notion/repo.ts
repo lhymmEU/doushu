@@ -15,9 +15,8 @@ import {
 } from "./properties";
 import { padSerial, TOTAL_GOAL } from "@/lib/format";
 import { generateMagicWord, normalizeMagicWord } from "@/lib/words";
-import { ALL_SERIAL_STATUSES } from "./status";
 
-import { COUNT_TAG, NICKNAMES_TAG, PAGE_TAG, WALL_TAG } from "./tags";
+import { COUNT_TAG, PAGE_TAG, WALL_TAG } from "./tags";
 
 export { COUNT_TAG, PAGE_TAG, WALL_TAG };
 
@@ -38,10 +37,14 @@ export async function listWall(): Promise<SerialRow[]> {
   do {
     const res = await notion().dataSources.query({
       data_source_id: dataSourceId(),
+      // Wall = anyone with a nickname, but not legacy `Wished` rows from
+      // the retired online-waitlist flow. Under the offline-issue flow,
+      // Wished rows aren't created anymore; this filter keeps any
+      // historical ones from showing up.
       filter: {
         and: [
-          { property: "Show on Wall", checkbox: { equals: true } },
           { property: "Nickname", rich_text: { is_not_empty: true } },
+          { property: "Status", select: { does_not_equal: "Wished" } },
         ],
       },
       sorts: [{ property: "Issued At", direction: "descending" }],
@@ -61,13 +64,14 @@ export async function listWall(): Promise<SerialRow[]> {
 /**
  * Counts surfaced on the homepage progress meter and the admin dashboard.
  *
- * - `issued` counts only rows that have actually been distributed (or are in
- *   the distribution pipeline). It excludes `Wished` rows so the
- *   `X / 3000 sold` meter doesn't fill up from people who joined the
- *   waitlist but haven't received a book yet.
- * - `wished` is the count of `Wished` rows — i.e. the live waitlist size.
- * - `onWall` counts every row that the wall renders (any status,
- *   including Wished, as long as Show on Wall + Nickname are set).
+ * - `issued` counts every row in the distribution pipeline (any status
+ *   other than `Wished`). The `X / 3000 sold` meter ticks up the moment
+ *   the vendor hands a serial to a buyer.
+ * - `wished` counts legacy `Wished` rows from the retired online
+ *   waitlist; under the offline-issue flow this trends to zero.
+ * - `onWall` counts rows that would appear on the wish wall (non-empty
+ *   nickname AND not `Wished`); names may display masked when
+ *   Show on Wall is off.
  *
  * Tagged separately from the wall so we can invalidate independently.
  */
@@ -97,10 +101,10 @@ export async function counts(): Promise<{
       const row = rowFromPage(r as unknown as NotionPage);
       if (row.status === "Wished") {
         wished += 1;
-      } else {
-        issued += 1;
+        continue;
       }
-      if (row.showOnWall && row.nickname) onWall += 1;
+      issued += 1;
+      if (row.nickname) onWall += 1;
     }
     cursor = res.next_cursor ?? undefined;
   } while (cursor);
@@ -183,22 +187,16 @@ export type IssuedSerial = {
 };
 
 /**
- * Reserve the next serial for a waitlist signup. Status starts as
- * `Wished`; the user's nickname is pinned to the row immediately so it
- * appears on the wall. A magic word is generated up-front so the
- * publisher can hand the buyer a credential pair the moment they hand
- * over a physical book — at which point the admin advances the row's
- * status from `Wished` → `Issued` (or directly to `Shipped`).
+ * Admin-only: mint the next serial when a vendor hands a buyer their
+ * physical mini zine. Status starts at `Issued` with no nickname — the
+ * buyer fills that in later by signing in with the credentials and
+ * completing their profile.
  *
- * Note: TOTAL_GOAL (3000) is a printing target, not a hard cap, so we
- * never refuse a claim. The progress meter just tops out visually.
+ * Magic word is generated up front so the vendor has a copy/screenshot
+ * to share privately. `TOTAL_GOAL` (3000) is a printing target, not a
+ * hard cap — we never refuse to issue.
  */
-export async function claimWishedSerial(
-  nickname: string
-): Promise<IssuedSerial> {
-  const trimmed = nickname.trim();
-  if (!trimmed) throw new Error("nickname_required");
-
+export async function issueNewSerial(): Promise<IssuedSerial> {
   const top = await highestSerial();
   const next = top + 1;
   const magicWord = generateMagicWord();
@@ -213,8 +211,8 @@ export async function claimWishedSerial(
       Number: number(next),
       "Magic Word": richText(magicWord),
       "Wants Printed Book": checkbox(false),
-      Status: selectOption("Wished"),
-      Nickname: richText(trimmed),
+      Status: selectOption("Issued"),
+      Nickname: richText(""),
       "Show on Wall": checkbox(true),
     },
   });
@@ -242,24 +240,25 @@ export async function resetAllSerials(): Promise<number> {
 }
 
 /**
- * Move a row to a new lifecycle status. Used by the admin management
- * panel to advance rows along the pipeline (e.g. `Wished` → `Issued`,
- * `Profile Complete` → `Shipped`). Always busts the wall + counts so
- * the homepage progress meter stays in sync — moving a row off
- * `Wished` flips it from the `wished` bucket into `issued` in
- * `counts()`.
+ * Admin-only: the printed (“real”) book has been mailed. Only when the
+ * buyer has requested the trade-up (`Exchange Requested`).
  */
-export async function setSerialStatus(
-  pageId: string,
-  status: SerialStatus
-): Promise<void> {
-  if (!ALL_SERIAL_STATUSES.includes(status)) {
-    throw new Error(`invalid_status:${status}`);
+export async function markPrintedBookShipped(pageId: string): Promise<void> {
+  const row = await getByPageId(pageId);
+  if (!row) throw new Error("not_found");
+  if (row.status === "Delivered") {
+    throw new Error("status_locked");
+  }
+  if (row.status === "Shipped") {
+    return;
+  }
+  if (row.status !== "Exchange Requested") {
+    throw new Error("not_exchange_requested");
   }
   await notion().pages.update({
     page_id: pageId,
     properties: {
-      Status: selectOption(status),
+      Status: selectOption("Shipped" as SerialStatus),
     },
   });
   bustWall();
@@ -273,36 +272,52 @@ export async function saveProfile(
     contact: string;
     wantsPrintedBook: boolean;
     showOnWall: boolean;
+    address: string;
   }
 ): Promise<void> {
-  const status: SerialStatus = "Profile Complete";
+  const row = await getByPageId(pageId);
+  if (!row) throw new Error("not_found");
+
+  const nick = input.nickname.trim();
+  const contact = input.contact.trim();
+  const addrIn = input.address.trim();
+
+  const locked = row.status === "Shipped" || row.status === "Delivered";
+
+  if (locked) {
+    await notion().pages.update({
+      page_id: pageId,
+      properties: {
+        Nickname: richText(nick),
+        Contact: richText(contact),
+        "Show on Wall": checkbox(input.showOnWall),
+        ...(addrIn.length >= 2 ? { Address: richText(addrIn) } : {}),
+      },
+    });
+    bustWall();
+    bustCounts();
+    return;
+  }
+
+  const addressToWrite = input.wantsPrintedBook ? addrIn : "";
+
+  if (input.wantsPrintedBook && addressToWrite.length < 2) {
+    throw new Error("address_required");
+  }
+
+  const nextStatus: SerialStatus = input.wantsPrintedBook
+    ? "Exchange Requested"
+    : "Profile Complete";
+
   await notion().pages.update({
     page_id: pageId,
     properties: {
-      Nickname: richText(input.nickname.trim()),
-      Contact: richText(input.contact.trim()),
+      Nickname: richText(nick),
+      Contact: richText(contact),
       "Wants Printed Book": checkbox(input.wantsPrintedBook),
       "Show on Wall": checkbox(input.showOnWall),
-      Status: selectOption(status),
-    },
-  });
-  bustWall();
-  bustCounts();
-  // A buyer just claimed/changed a nickname — invalidate the cached
-  // uniqueness set so the waitlist sees fresh data on its next check.
-  revalidateTag(NICKNAMES_TAG, "max");
-}
-
-export async function requestExchange(
-  pageId: string,
-  address: string
-): Promise<void> {
-  await notion().pages.update({
-    page_id: pageId,
-    properties: {
-      Address: richText(address.trim()),
-      "Wants Printed Book": checkbox(true),
-      Status: selectOption("Exchange Requested" as SerialStatus),
+      Address: richText(addressToWrite),
+      Status: selectOption(nextStatus),
     },
   });
   bustWall();
@@ -321,10 +336,16 @@ export async function confirmDelivery(pageId: string): Promise<void> {
 }
 
 export async function cancelExchange(pageId: string): Promise<void> {
+  const row = await getByPageId(pageId);
+  if (!row) throw new Error("not_found");
+  if (row.status === "Shipped" || row.status === "Delivered") {
+    throw new Error("exchange_locked");
+  }
   await notion().pages.update({
     page_id: pageId,
     properties: {
       "Wants Printed Book": checkbox(false),
+      Address: richText(""),
       Status: selectOption("Profile Complete" as SerialStatus),
     },
   });

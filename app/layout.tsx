@@ -34,11 +34,12 @@ const sans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "豆书 · Doushu — A 3000-copy mini-book co-publishing event",
+  title:
+    "DAO Longtan mini zine · daominizine.magicsheep.tech — three thousand co-creators, one book",
   description:
-    "A handmade mini-book from Wuhan. Find your serial, claim your copy, and help bring the print run to life.",
-  applicationName: "Doushu",
-  authors: [{ name: "Doushu Press" }],
+    "DAO Longtan mini zine — a Wuhan co-publishing event. Pick a memory of Longtan, make a pocket zine, and when three thousand co-creators gather, the real book goes to print—mailed from Wuhan.",
+  applicationName: "DAO Longtan mini zine",
+  authors: [{ name: "Oklado / Tang Han / Li Haoyang" }],
   formatDetection: { telephone: false, email: false, address: false },
 };
 

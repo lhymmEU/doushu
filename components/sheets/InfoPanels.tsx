@@ -41,7 +41,7 @@ export function HowPanel() {
               <h4 className="text-display text-base text-ink">
                 {step.title}
               </h4>
-              <p className="text-sm leading-relaxed text-ink-soft">
+              <p className="whitespace-pre-line text-sm leading-relaxed text-ink-soft">
                 {step.body}
               </p>
             </div>
@@ -70,7 +70,7 @@ export function FaqPanel() {
                   +
                 </span>
               </summary>
-              <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+              <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-soft">
                 {it.a}
               </p>
             </details>

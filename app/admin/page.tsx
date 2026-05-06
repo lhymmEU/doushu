@@ -2,11 +2,9 @@ import { Suspense } from "react";
 import { ArrowUpRight, LogOut } from "lucide-react";
 import { AdminLogin } from "@/components/admin/AdminLogin";
 import { ManagePanel } from "@/components/admin/ManagePanel";
-import { ShipReadyToggle } from "@/components/admin/ShipReadyToggle";
 import { TopBar } from "@/components/hero/TopBar";
 import { readAdmin } from "@/lib/auth/session";
 import { counts } from "@/lib/notion/repo";
-import { readShipReady } from "@/lib/notion/settings";
 import { isNotionConfigured, parentPageUrl } from "@/lib/notion/client";
 import { adminSignOutAction } from "@/app/actions";
 import { getCopy } from "@/lib/server-i18n";
@@ -42,13 +40,6 @@ async function AdminBody() {
     }
   }
 
-  let shipReady = false;
-  try {
-    shipReady = await readShipReady();
-  } catch (e) {
-    console.error("[admin] readShipReady failed", e);
-  }
-
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col">
       <TopBar
@@ -73,8 +64,6 @@ async function AdminBody() {
           <Stat label={t.progress.goal} value={stats.goal} dim />
         </div>
       </header>
-
-      <ShipReadyToggle initialReady={shipReady} />
 
       <ManagePanel />
 
