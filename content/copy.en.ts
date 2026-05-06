@@ -127,7 +127,7 @@ export const en: Copy = {
       {
         title: "Get your co-creator serial + magic word",
         body:
-          "Scan the DAO Longtan mini zine site QR code, or open daominizine.magicsheep.tech in your browser.\nTap “I want one,” enter your nickname, then scan into the DAO Longtan mini zine Xiaohongshu group.\nOrganisers assign your serial number and magic word—save a photo or screenshot.",
+          "Scan the DAO Longtan mini zine site QR code, or open this site in your browser: https://daominizine.magicsheep.tech/\nTap “I want one,” enter your nickname, then scan into the DAO Longtan mini zine Xiaohongshu group.\nOrganisers assign your serial number and magic word—save a photo or screenshot.",
       },
       {
         title: "Sign in again with serial + magic word",

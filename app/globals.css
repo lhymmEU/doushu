@@ -11,7 +11,7 @@
 
 :root {
   /* Brand surfaces */
-  --paper: oklch(0.962 0.018 80);          /* warm ivory background */
+  --paper: oklch(1 0 0);                   /* Notion page white (#fff) */
   --ivory: oklch(0.928 0.025 80);          /* card ivory */
   --ink: oklch(0.15 0.012 280);            /* near-black text */
   --ink-soft: oklch(0.35 0.01 280);        /* secondary text */
