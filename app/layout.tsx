@@ -39,6 +39,19 @@ export const metadata: Metadata = {
   description:
     "DAO Longtan mini zine — a Wuhan co-publishing event. Pick a memory of Longtan, make a pocket zine, and when three thousand co-creators gather, the real book goes to print—mailed from Wuhan.",
   applicationName: "DAO Longtan mini zine",
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "DAO Longtan mini zine",
+    statusBarStyle: "default",
+  },
   authors: [{ name: "Oklado / Tang Han / Li Haoyang" }],
   formatDetection: { telephone: false, email: false, address: false },
 };
